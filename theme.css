@@ -1,7 +1,7 @@
 :root {
-  --iron: #41464b;
-  --iron-deep: #363b40;
-  --iron-soft: #555b61;
+  --iron: #2f3337;
+  --iron-deep: #24282c;
+  --iron-soft: #454a4f;
 }
 
 html {
@@ -10,9 +10,9 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 18% 0%, rgba(255,255,255,.08), transparent 24rem),
-    radial-gradient(circle at 92% 12%, rgba(255,255,255,.035), transparent 20rem),
-    linear-gradient(180deg, #4a4f54 0%, var(--iron) 36%, var(--iron-deep) 100%);
+    radial-gradient(circle at 18% 0%, rgba(255,255,255,.065), transparent 24rem),
+    radial-gradient(circle at 92% 12%, rgba(255,255,255,.025), transparent 20rem),
+    linear-gradient(180deg, #393e43 0%, var(--iron) 36%, var(--iron-deep) 100%);
 }
 
 /* Hero and category cards share one glass material. */
