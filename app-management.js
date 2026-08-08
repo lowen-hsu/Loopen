@@ -6,14 +6,14 @@ function requestAppDelete(categoryId, appId) {
   if (!category || !app) return;
 
   confirmTitle.textContent = `刪除「${app.name}」？`;
-  confirmDescription.textContent = "刪除後會從這個分類移除。若你正在調整 App 順序，仍可用下方的「取消」復原。";
+  confirmDescription.textContent = "刪除後會從這個分類移除。若你正在管理 App，仍可用下方的「取消」復原。";
   confirmSubmit.textContent = "刪除";
   confirmAction = () => {
     const currentCategory = getCategory(categoryId);
     if (!currentCategory) return;
     currentCategory.apps = currentCategory.apps.filter(candidate => candidate.id !== appId);
 
-    /* Outside a management/sort session, deletion should persist immediately. */
+    /* Outside a management session, deletion should persist immediately. */
     if (!sortSession || sortSession.mode !== "app" || sortSession.categoryId !== categoryId) {
       persistState();
     }
@@ -68,12 +68,6 @@ createAppItem = function createManagedAppItem(category, app) {
     window.open(app.url, "_blank", "noopener,noreferrer");
   });
 
-  /* Desktop users can also right-click an app to delete it. */
-  main.addEventListener("contextmenu", event => {
-    event.preventDefault();
-    requestAppDelete(category.id, app.id);
-  });
-
   const controls = document.createElement("div");
   controls.className = "sort-controls app-manage-controls";
   const index = category.apps.findIndex(candidate => candidate.id === app.id);
@@ -91,5 +85,18 @@ createAppItem = function createManagedAppItem(category, app) {
   return item;
 };
 
-/* app.js renders once before this enhancement file loads, so refresh the view with the managed item renderer. */
+/* Rename the category action because this mode now handles both ordering and deletion. */
+const renderWithoutAppManagementLabels = render;
+render = function renderWithAppManagement() {
+  renderWithoutAppManagementLabels();
+  document.querySelectorAll(".category-menu button").forEach(button => {
+    const text = button.querySelector("span:first-child");
+    if (text?.textContent === "調整 App 順序") text.textContent = "管理 App";
+  });
+  document.querySelectorAll(".inline-sortbar p").forEach(message => {
+    if (message.textContent.includes("App 順序")) message.textContent = message.textContent.replace("App 順序", "App");
+  });
+};
+
+/* app.js renders once before this enhancement file loads, so refresh the view. */
 render();
