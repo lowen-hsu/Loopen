@@ -1,4 +1,4 @@
-/* Enhances Loopen with server-side PWA manifest discovery. */
+/* Enhances Loopen with server-side PWA manifest discovery for newly added apps. */
 
 const ICON_META_VERSION = 2;
 
@@ -68,39 +68,3 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
     submitButton.textContent = originalLabel;
   }
 };
-
-async function upgradeStoredAppIcons() {
-  const candidates = [];
-
-  state.categories.forEach(category => {
-    category.apps.forEach(app => {
-      if (app.url && Number(app.iconMetaVersion || 0) < ICON_META_VERSION) candidates.push(app);
-    });
-  });
-
-  if (!candidates.length) return;
-
-  let changed = false;
-
-  for (const app of candidates) {
-    const metadata = await fetchAppMetadata(app.url);
-    if (!metadata?.icon) continue;
-
-    app.icon = metadata.icon;
-    app.iconSource = metadata.iconSource || "favicon-fallback";
-    app.iconPurpose = metadata.iconPurpose || null;
-    app.iconSizes = metadata.iconSizes || null;
-    app.iconMetaVersion = ICON_META_VERSION;
-    changed = true;
-  }
-
-  if (changed) {
-    persistState();
-    render();
-  }
-}
-
-/* Existing localStorage entries are re-evaluated when the icon-selection strategy changes. */
-setTimeout(() => {
-  upgradeStoredAppIcons().catch(error => console.warn("Loopen icon upgrade failed.", error));
-}, 0);
