@@ -1,4 +1,17 @@
-/* Enhances the existing add-app flow with server-side PWA manifest discovery. */
+/* Enhances Loopen with server-side PWA manifest discovery. */
+
+async function fetchAppMetadata(url) {
+  try {
+    const response = await fetch(`/api/app-meta?url=${encodeURIComponent(url)}`, {
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.warn("Loopen PWA icon lookup unavailable; using favicon fallback.", error);
+    return null;
+  }
+}
 
 submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
   const category = getCategory(categoryId);
@@ -20,15 +33,7 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
   submitButton.disabled = true;
   submitButton.textContent = "讀取圖示…";
 
-  let metadata = null;
-  try {
-    const response = await fetch(`/api/app-meta?url=${encodeURIComponent(normalizedUrl)}`, {
-      headers: { Accept: "application/json" }
-    });
-    if (response.ok) metadata = await response.json();
-  } catch (error) {
-    console.warn("Loopen PWA icon lookup unavailable; using favicon fallback.", error);
-  }
+  const metadata = await fetchAppMetadata(normalizedUrl);
 
   try {
     const name = nameInput.value.trim() || metadata?.name || nameFromUrl(normalizedUrl);
@@ -58,3 +63,36 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
     submitButton.textContent = originalLabel;
   }
 };
+
+async function upgradeLegacyAppIcons() {
+  const legacyApps = [];
+
+  state.categories.forEach(category => {
+    category.apps.forEach(app => {
+      if (!app.iconSource && app.url) legacyApps.push(app);
+    });
+  });
+
+  if (!legacyApps.length) return;
+
+  let changed = false;
+
+  for (const app of legacyApps) {
+    const metadata = await fetchAppMetadata(app.url);
+    if (!metadata?.icon) continue;
+
+    app.icon = metadata.icon;
+    app.iconSource = metadata.iconSource || "favicon-fallback";
+    changed = true;
+  }
+
+  if (changed) {
+    persistState();
+    render();
+  }
+}
+
+/* Existing localStorage entries created before PWA discovery are upgraded automatically. */
+setTimeout(() => {
+  upgradeLegacyAppIcons().catch(error => console.warn("Loopen icon upgrade failed.", error));
+}, 0);
