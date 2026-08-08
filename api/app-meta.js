@@ -27,6 +27,8 @@ module.exports = async function handler(req, res) {
 
     let icon = null;
     let iconSource = null;
+    let iconPurpose = null;
+    let iconSizes = null;
     let manifestName = null;
 
     const manifestLink = links.find(link => link.rel.includes("manifest") && link.href);
@@ -41,6 +43,8 @@ module.exports = async function handler(req, res) {
           if (candidate?.src) {
             icon = new URL(candidate.src, manifestFetch.url).href;
             iconSource = "manifest";
+            iconPurpose = String(candidate.purpose || "any").toLowerCase();
+            iconSizes = String(candidate.sizes || "");
           }
           manifestName = cleanText(manifest.short_name || manifest.name || "");
         }
@@ -55,6 +59,7 @@ module.exports = async function handler(req, res) {
       if (candidate?.href) {
         icon = new URL(decodeHtmlEntities(candidate.href), pageUrl).href;
         iconSource = "apple-touch-icon";
+        iconSizes = candidate.sizes || null;
       }
     }
 
@@ -64,6 +69,7 @@ module.exports = async function handler(req, res) {
       if (candidate?.href) {
         icon = new URL(decodeHtmlEntities(candidate.href), pageUrl).href;
         iconSource = "icon";
+        iconSizes = candidate.sizes || null;
       }
     }
 
@@ -72,12 +78,14 @@ module.exports = async function handler(req, res) {
       iconSource = "favicon-fallback";
     }
 
-    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
+    res.setHeader("Cache-Control", "public, max-age=120, s-maxage=900, stale-while-revalidate=3600");
     return res.status(200).json({
       url: pageUrl,
       name: manifestName || title || null,
       icon,
-      iconSource
+      iconSource,
+      iconPurpose,
+      iconSizes
     });
   } catch (error) {
     console.warn("Loopen app metadata lookup failed", error?.message || error);
@@ -86,6 +94,8 @@ module.exports = async function handler(req, res) {
       name: null,
       icon: null,
       iconSource: null,
+      iconPurpose: null,
+      iconSizes: null,
       fallback: true
     });
   }
@@ -95,7 +105,7 @@ function normalizeHttpUrl(raw) {
   let value = String(raw || "").trim();
   if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
   const url = new URL(value);
-  if (!['http:', 'https:'].includes(url.protocol)) throw new Error("invalid_protocol");
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error("invalid_protocol");
   if (url.username || url.password) throw new Error("credentials_not_allowed");
   return url.href;
 }
@@ -205,31 +215,65 @@ function parseLinkTags(html) {
 
 function chooseManifestIcon(icons) {
   if (!Array.isArray(icons) || !icons.length) return null;
-  return [...icons]
-    .filter(icon => icon && typeof icon.src === "string" && icon.src.trim())
-    .sort((a, b) => manifestIconScore(b) - manifestIconScore(a))[0] || null;
+
+  const valid = icons.filter(icon => icon && typeof icon.src === "string" && icon.src.trim());
+  if (!valid.length) return null;
+
+  /* Monochrome icons are intended for OS tinting, not for a launcher tile. */
+  const nonMonochrome = valid.filter(icon => !isMonochromeOnly(icon));
+  const pool = nonMonochrome.length ? nonMonochrome : valid;
+
+  return [...pool].sort((a, b) => manifestIconScore(b) - manifestIconScore(a))[0] || null;
+}
+
+function isMonochromeOnly(icon) {
+  const purposes = String(icon.purpose || "any").toLowerCase().split(/\s+/).filter(Boolean);
+  return purposes.includes("monochrome") && !purposes.includes("any") && !purposes.includes("maskable");
 }
 
 function manifestIconScore(icon) {
   const purpose = String(icon.purpose || "any").toLowerCase();
-  let score = sizeScore(icon.sizes);
-  if (purpose.includes("any")) score += 2000000;
-  if (purpose.includes("maskable")) score += 1000000;
-  if (purpose.includes("monochrome")) score -= 500000;
-  if (String(icon.type || "").includes("svg")) score += 1500000;
+  const type = String(icon.type || "").toLowerCase();
+  const src = String(icon.src || "").toLowerCase();
+  let score = rasterSizeScore(icon.sizes);
+
+  /* A normal 'any' icon is the closest match to what users expect in a launcher. */
+  if (purpose.includes("any")) score += 8_000_000;
+  else if (purpose.includes("maskable")) score += 3_000_000;
+  if (purpose.includes("monochrome")) score -= 8_000_000;
+
+  /* Prefer square raster artwork. SVGs often contain logo-only artwork with large intrinsic whitespace. */
+  if (type.includes("png") || src.endsWith(".png")) score += 2_500_000;
+  else if (type.includes("webp") || src.endsWith(".webp")) score += 2_000_000;
+  else if (type.includes("jpeg") || type.includes("jpg") || /\.jpe?g(?:\?|$)/.test(src)) score += 1_000_000;
+  else if (type.includes("svg") || src.includes(".svg")) score += 150_000;
+
   return score;
 }
 
 function chooseHtmlIcon(icons) {
-  return [...icons].sort((a, b) => sizeScore(b.sizes) - sizeScore(a.sizes))[0] || null;
+  return [...icons].sort((a, b) => htmlIconScore(b) - htmlIconScore(a))[0] || null;
 }
 
-function sizeScore(sizes) {
+function htmlIconScore(icon) {
+  const type = String(icon.type || "").toLowerCase();
+  const href = String(icon.href || "").toLowerCase();
+  let score = rasterSizeScore(icon.sizes);
+  if (type.includes("png") || href.endsWith(".png")) score += 1_000_000;
+  if (type.includes("svg") || href.includes(".svg")) score += 100_000;
+  return score;
+}
+
+function rasterSizeScore(sizes) {
   const value = String(sizes || "").toLowerCase();
-  if (value.includes("any")) return 5000000;
+  if (value.includes("any")) return 1_048_576;
   let best = 0;
   for (const match of value.matchAll(/(\d+)x(\d+)/g)) {
-    best = Math.max(best, Number(match[1]) * Number(match[2]));
+    const width = Number(match[1]);
+    const height = Number(match[2]);
+    if (!width || !height) continue;
+    const squarePenalty = Math.abs(width - height) * 500;
+    best = Math.max(best, Math.min(width * height, 4_194_304) - squarePenalty);
   }
   return best;
 }
