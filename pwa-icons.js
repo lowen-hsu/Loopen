@@ -1,8 +1,10 @@
 /* Enhances Loopen with server-side PWA manifest discovery. */
 
+const ICON_META_VERSION = 2;
+
 async function fetchAppMetadata(url) {
   try {
-    const response = await fetch(`/api/app-meta?url=${encodeURIComponent(url)}`, {
+    const response = await fetch(`/api/app-meta?v=${ICON_META_VERSION}&url=${encodeURIComponent(url)}`, {
       headers: { Accept: "application/json" }
     });
     if (!response.ok) return null;
@@ -51,7 +53,10 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
       name,
       url: normalizedUrl,
       icon,
-      iconSource: metadata?.iconSource || "favicon-fallback"
+      iconSource: metadata?.iconSource || "favicon-fallback",
+      iconPurpose: metadata?.iconPurpose || null,
+      iconSizes: metadata?.iconSizes || null,
+      iconMetaVersion: ICON_META_VERSION
     });
 
     persistState();
@@ -64,25 +69,28 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
   }
 };
 
-async function upgradeLegacyAppIcons() {
-  const legacyApps = [];
+async function upgradeStoredAppIcons() {
+  const candidates = [];
 
   state.categories.forEach(category => {
     category.apps.forEach(app => {
-      if (!app.iconSource && app.url) legacyApps.push(app);
+      if (app.url && Number(app.iconMetaVersion || 0) < ICON_META_VERSION) candidates.push(app);
     });
   });
 
-  if (!legacyApps.length) return;
+  if (!candidates.length) return;
 
   let changed = false;
 
-  for (const app of legacyApps) {
+  for (const app of candidates) {
     const metadata = await fetchAppMetadata(app.url);
     if (!metadata?.icon) continue;
 
     app.icon = metadata.icon;
     app.iconSource = metadata.iconSource || "favicon-fallback";
+    app.iconPurpose = metadata.iconPurpose || null;
+    app.iconSizes = metadata.iconSizes || null;
+    app.iconMetaVersion = ICON_META_VERSION;
     changed = true;
   }
 
@@ -92,7 +100,7 @@ async function upgradeLegacyAppIcons() {
   }
 }
 
-/* Existing localStorage entries created before PWA discovery are upgraded automatically. */
+/* Existing localStorage entries are re-evaluated when the icon-selection strategy changes. */
 setTimeout(() => {
-  upgradeLegacyAppIcons().catch(error => console.warn("Loopen icon upgrade failed.", error));
+  upgradeStoredAppIcons().catch(error => console.warn("Loopen icon upgrade failed.", error));
 }, 0);
