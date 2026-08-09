@@ -1,6 +1,7 @@
 /* Enhances Loopen with server-side PWA manifest discovery for newly added apps. */
 
-const ICON_META_VERSION = 2;
+const ICON_META_VERSION = 3;
+const iconRepairInFlight = new Set();
 
 async function fetchAppMetadata(url) {
   try {
@@ -68,3 +69,78 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
     submitButton.textContent = originalLabel;
   }
 };
+
+/*
+ * Normal stored icons are never reset. Only icons that are clearly unsuitable
+ * for a launcher (non-square artwork or weak favicon fallback sources) are
+ * checked for a better square candidate.
+ */
+async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
+  const category = getCategory(categoryId);
+  const app = category?.apps.find(candidate => candidate.id === appId);
+  if (!app?.url || !app.icon || !imageElement?.naturalWidth || !imageElement?.naturalHeight) return;
+
+  const ratio = imageElement.naturalWidth / imageElement.naturalHeight;
+  const weirdAspect = ratio < 0.8 || ratio > 1.25;
+  const weakSource = app.iconSource === "icon" || app.iconSource === "favicon-fallback";
+  const weakSvg = /\.svg(?:\?|$)/i.test(app.icon) && app.iconSource !== "manifest";
+
+  if (!weirdAspect && !weakSource && !weakSvg) return;
+  if (Number(app.iconMetaVersion || 0) >= ICON_META_VERSION && !weirdAspect) return;
+  if (iconRepairInFlight.has(app.id)) return;
+
+  iconRepairInFlight.add(app.id);
+  try {
+    const metadata = await fetchAppMetadata(app.url);
+    const candidates = Array.isArray(metadata?.iconCandidates) ? metadata.iconCandidates : [];
+    if (metadata?.icon && !candidates.some(candidate => candidate.icon === metadata.icon)) {
+      candidates.unshift({
+        icon: metadata.icon,
+        iconSource: metadata.iconSource,
+        iconPurpose: metadata.iconPurpose,
+        iconSizes: metadata.iconSizes
+      });
+    }
+
+    for (const candidate of candidates) {
+      if (!candidate?.icon || candidate.icon === app.icon) continue;
+      const dimensions = await probeImage(candidate.icon);
+      if (!dimensions) continue;
+      const candidateRatio = dimensions.width / dimensions.height;
+      if (candidateRatio < 0.88 || candidateRatio > 1.14) continue;
+
+      app.icon = candidate.icon;
+      app.iconSource = candidate.iconSource || "icon";
+      app.iconPurpose = candidate.iconPurpose || null;
+      app.iconSizes = candidate.iconSizes || null;
+      app.iconMetaVersion = ICON_META_VERSION;
+      persistState();
+      render();
+      return;
+    }
+
+    /* Mark the check complete so a weak-but-valid icon does not trigger on every render. */
+    app.iconMetaVersion = ICON_META_VERSION;
+    persistState();
+  } catch (error) {
+    console.warn("Loopen icon repair failed.", error);
+  } finally {
+    iconRepairInFlight.delete(app.id);
+  }
+}
+
+function probeImage(url) {
+  return new Promise(resolve => {
+    const probe = new Image();
+    const timer = setTimeout(() => resolve(null), 4500);
+    probe.onload = () => {
+      clearTimeout(timer);
+      resolve({ width: probe.naturalWidth, height: probe.naturalHeight });
+    };
+    probe.onerror = () => {
+      clearTimeout(timer);
+      resolve(null);
+    };
+    probe.src = url;
+  });
+}
