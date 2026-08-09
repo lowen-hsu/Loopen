@@ -30,13 +30,15 @@
   max-width: 70px;
 }
 
-/* Keep every site icon at the original compact visual size, regardless of source artwork. */
+/* Keep every site icon at the original compact visual size and preserve the site's own colors. */
 .category-card .app-favicon {
   width: 25px !important;
   height: 25px !important;
   max-width: 25px;
   max-height: 25px;
   object-fit: contain;
+  filter: none !important;
+  opacity: 1 !important;
 }
 
 /* In App management mode, left/right/delete fit underneath each icon without widening the lane. */
