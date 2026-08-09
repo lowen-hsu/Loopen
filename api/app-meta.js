@@ -24,68 +24,89 @@ module.exports = async function handler(req, res) {
     const pageUrl = page.url;
     const links = parseLinkTags(html);
     const title = extractTitle(html);
-
-    let icon = null;
-    let iconSource = null;
-    let iconPurpose = null;
-    let iconSizes = null;
+    const candidates = [];
     let manifestName = null;
 
-    const manifestLink = links.find(link => link.rel.includes("manifest") && link.href);
-    if (manifestLink) {
+    const manifestUrls = [];
+    const linkedManifest = links.find(link => link.rel.includes("manifest") && link.href);
+    if (linkedManifest) manifestUrls.push(new URL(decodeHtmlEntities(linkedManifest.href), pageUrl).href);
+
+    /* Some small/self-hosted PWAs expose a manifest without a usable <link rel="manifest">. */
+    manifestUrls.push(
+      new URL("/manifest.webmanifest", pageUrl).href,
+      new URL("/manifest.json", pageUrl).href
+    );
+
+    for (const manifestUrl of [...new Set(manifestUrls)]) {
       try {
-        const manifestUrl = new URL(decodeHtmlEntities(manifestLink.href), pageUrl).href;
         const manifestFetch = await safeFetch(manifestUrl, "application/manifest+json,application/json,text/plain;q=0.8,*/*;q=0.4");
-        if (manifestFetch.response.ok) {
-          const manifestText = (await manifestFetch.response.text()).slice(0, 500000).replace(/^\uFEFF/, "");
-          const manifest = JSON.parse(manifestText);
-          const candidate = chooseManifestIcon(manifest.icons);
-          if (candidate?.src) {
-            icon = new URL(candidate.src, manifestFetch.url).href;
-            iconSource = "manifest";
-            iconPurpose = String(candidate.purpose || "any").toLowerCase();
-            iconSizes = String(candidate.sizes || "");
-          }
-          manifestName = cleanText(manifest.short_name || manifest.name || "");
+        if (!manifestFetch.response.ok) continue;
+        const manifestText = (await manifestFetch.response.text()).slice(0, 500000).replace(/^\uFEFF/, "");
+        const manifest = JSON.parse(manifestText);
+        if (!manifestName) manifestName = cleanText(manifest.short_name || manifest.name || "");
+
+        for (const icon of Array.isArray(manifest.icons) ? manifest.icons : []) {
+          if (!icon || typeof icon.src !== "string" || !icon.src.trim()) continue;
+          if (isMonochromeOnly(icon)) continue;
+          candidates.push({
+            url: new URL(icon.src, manifestFetch.url).href,
+            source: "manifest",
+            purpose: String(icon.purpose || "any").toLowerCase(),
+            sizes: String(icon.sizes || ""),
+            type: String(icon.type || ""),
+            score: manifestIconScore(icon)
+          });
         }
       } catch (error) {
-        console.warn("Loopen manifest lookup failed", error?.message || error);
+        /* Common manifest fallbacks often do not exist; silently continue. */
       }
     }
 
-    if (!icon) {
-      const appleIcons = links.filter(link => link.href && link.rel.includes("apple-touch-icon"));
-      const candidate = chooseHtmlIcon(appleIcons);
-      if (candidate?.href) {
-        icon = new URL(decodeHtmlEntities(candidate.href), pageUrl).href;
-        iconSource = "apple-touch-icon";
-        iconSizes = candidate.sizes || null;
-      }
+    for (const link of links.filter(link => link.href && link.rel.includes("apple-touch-icon"))) {
+      candidates.push({
+        url: new URL(decodeHtmlEntities(link.href), pageUrl).href,
+        source: "apple-touch-icon",
+        purpose: null,
+        sizes: link.sizes || "",
+        type: link.type || "",
+        score: 6_000_000 + htmlIconScore(link)
+      });
     }
 
-    if (!icon) {
-      const regularIcons = links.filter(link => link.href && link.rel.includes("icon") && !link.rel.includes("apple-touch-icon"));
-      const candidate = chooseHtmlIcon(regularIcons);
-      if (candidate?.href) {
-        icon = new URL(decodeHtmlEntities(candidate.href), pageUrl).href;
-        iconSource = "icon";
-        iconSizes = candidate.sizes || null;
-      }
+    for (const link of links.filter(link => link.href && link.rel.includes("icon") && !link.rel.includes("apple-touch-icon"))) {
+      candidates.push({
+        url: new URL(decodeHtmlEntities(link.href), pageUrl).href,
+        source: "icon",
+        purpose: null,
+        sizes: link.sizes || "",
+        type: link.type || "",
+        score: 2_000_000 + htmlIconScore(link)
+      });
     }
 
-    if (!icon) {
-      icon = new URL("/favicon.ico", pageUrl).href;
-      iconSource = "favicon-fallback";
-    }
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0] || {
+      url: new URL("/favicon.ico", pageUrl).href,
+      source: "favicon-fallback",
+      purpose: null,
+      sizes: null,
+      type: null
+    };
 
     res.setHeader("Cache-Control", "public, max-age=120, s-maxage=900, stale-while-revalidate=3600");
     return res.status(200).json({
       url: pageUrl,
       name: manifestName || title || null,
-      icon,
-      iconSource,
-      iconPurpose,
-      iconSizes
+      icon: best.url,
+      iconSource: best.source,
+      iconPurpose: best.purpose,
+      iconSizes: best.sizes,
+      iconCandidates: candidates.slice(0, 6).map(candidate => ({
+        icon: candidate.url,
+        iconSource: candidate.source,
+        iconPurpose: candidate.purpose,
+        iconSizes: candidate.sizes
+      }))
     });
   } catch (error) {
     console.warn("Loopen app metadata lookup failed", error?.message || error);
@@ -96,6 +117,7 @@ module.exports = async function handler(req, res) {
       iconSource: null,
       iconPurpose: null,
       iconSizes: null,
+      iconCandidates: [],
       fallback: true
     });
   }
@@ -115,7 +137,6 @@ async function safeFetch(rawUrl, accept) {
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
     await assertPublicDestination(current);
-
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     let response;
@@ -139,41 +160,28 @@ async function safeFetch(rawUrl, accept) {
       current = new URL(location, current).href;
       continue;
     }
-
     return { response, url: current };
   }
-
   throw new Error("too_many_redirects");
 }
 
 async function assertPublicDestination(rawUrl) {
   const url = new URL(rawUrl);
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
-
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local") ||
-    hostname.endsWith(".internal")
-  ) {
+  if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local") || hostname.endsWith(".internal")) {
     throw new Error("private_host_not_allowed");
   }
-
   if (net.isIP(hostname)) {
     if (isPrivateIp(hostname)) throw new Error("private_ip_not_allowed");
     return;
   }
-
   const addresses = await dns.lookup(hostname, { all: true, verbatim: true });
-  if (!addresses.length || addresses.some(entry => isPrivateIp(entry.address))) {
-    throw new Error("private_destination_not_allowed");
-  }
+  if (!addresses.length || addresses.some(entry => isPrivateIp(entry.address))) throw new Error("private_destination_not_allowed");
 }
 
 function isPrivateIp(address) {
   if (!address) return true;
   const lower = address.toLowerCase();
-
   if (net.isIPv6(lower)) {
     if (lower === "::" || lower === "::1") return true;
     if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
@@ -182,7 +190,6 @@ function isPrivateIp(address) {
     if (lower.startsWith("::ffff:")) return isPrivateIp(lower.slice(7));
     return false;
   }
-
   if (!net.isIPv4(lower)) return true;
   const [a, b] = lower.split(".").map(Number);
   if (a === 0 || a === 10 || a === 127) return true;
@@ -201,9 +208,7 @@ function parseLinkTags(html) {
     const attrs = {};
     const attrPattern = /([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
     let match;
-    while ((match = attrPattern.exec(tag))) {
-      attrs[match[1].toLowerCase()] = match[2] ?? match[3] ?? match[4] ?? "";
-    }
+    while ((match = attrPattern.exec(tag))) attrs[match[1].toLowerCase()] = match[2] ?? match[3] ?? match[4] ?? "";
     return {
       href: attrs.href || "",
       rel: String(attrs.rel || "").toLowerCase().split(/\s+/).filter(Boolean),
@@ -211,19 +216,6 @@ function parseLinkTags(html) {
       type: attrs.type || ""
     };
   });
-}
-
-function chooseManifestIcon(icons) {
-  if (!Array.isArray(icons) || !icons.length) return null;
-
-  const valid = icons.filter(icon => icon && typeof icon.src === "string" && icon.src.trim());
-  if (!valid.length) return null;
-
-  /* Monochrome icons are intended for OS tinting, not for a launcher tile. */
-  const nonMonochrome = valid.filter(icon => !isMonochromeOnly(icon));
-  const pool = nonMonochrome.length ? nonMonochrome : valid;
-
-  return [...pool].sort((a, b) => manifestIconScore(b) - manifestIconScore(a))[0] || null;
 }
 
 function isMonochromeOnly(icon) {
@@ -236,31 +228,22 @@ function manifestIconScore(icon) {
   const type = String(icon.type || "").toLowerCase();
   const src = String(icon.src || "").toLowerCase();
   let score = rasterSizeScore(icon.sizes);
-
-  /* A normal 'any' icon is the closest match to what users expect in a launcher. */
-  if (purpose.includes("any")) score += 8_000_000;
-  else if (purpose.includes("maskable")) score += 3_000_000;
-  if (purpose.includes("monochrome")) score -= 8_000_000;
-
-  /* Prefer square raster artwork. SVGs often contain logo-only artwork with large intrinsic whitespace. */
-  if (type.includes("png") || src.endsWith(".png")) score += 2_500_000;
-  else if (type.includes("webp") || src.endsWith(".webp")) score += 2_000_000;
-  else if (type.includes("jpeg") || type.includes("jpg") || /\.jpe?g(?:\?|$)/.test(src)) score += 1_000_000;
-  else if (type.includes("svg") || src.includes(".svg")) score += 150_000;
-
+  if (purpose.includes("any")) score += 9_000_000;
+  else if (purpose.includes("maskable")) score += 4_000_000;
+  if (purpose.includes("monochrome")) score -= 9_000_000;
+  if (type.includes("png") || src.includes(".png")) score += 3_000_000;
+  else if (type.includes("webp") || src.includes(".webp")) score += 2_500_000;
+  else if (type.includes("svg") || src.includes(".svg")) score += 250_000;
   return score;
-}
-
-function chooseHtmlIcon(icons) {
-  return [...icons].sort((a, b) => htmlIconScore(b) - htmlIconScore(a))[0] || null;
 }
 
 function htmlIconScore(icon) {
   const type = String(icon.type || "").toLowerCase();
   const href = String(icon.href || "").toLowerCase();
   let score = rasterSizeScore(icon.sizes);
-  if (type.includes("png") || href.endsWith(".png")) score += 1_000_000;
-  if (type.includes("svg") || href.includes(".svg")) score += 100_000;
+  if (type.includes("png") || href.includes(".png")) score += 1_500_000;
+  else if (type.includes("webp") || href.includes(".webp")) score += 1_250_000;
+  else if (type.includes("svg") || href.includes(".svg")) score += 100_000;
   return score;
 }
 
@@ -272,7 +255,7 @@ function rasterSizeScore(sizes) {
     const width = Number(match[1]);
     const height = Number(match[2]);
     if (!width || !height) continue;
-    const squarePenalty = Math.abs(width - height) * 500;
+    const squarePenalty = Math.abs(width - height) * 1000;
     best = Math.max(best, Math.min(width * height, 4_194_304) - squarePenalty);
   }
   return best;
