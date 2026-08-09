@@ -50,6 +50,9 @@ createAppItem = function createManagedAppItem(category, app) {
     icon.loading = "lazy";
     icon.addEventListener("load", () => {
       initial.hidden = true;
+      if (typeof repairAppIconIfNeeded === "function") {
+        repairAppIconIfNeeded(category.id, app.id, icon);
+      }
     });
     icon.addEventListener("error", () => {
       icon.remove();
