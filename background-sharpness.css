@@ -1,0 +1,27 @@
+/* Preserve the paper texture instead of stretching a portrait reference across a wide desktop. */
+body {
+  background-size: min(640px, 100vw) auto !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  background-color: #342c25 !important;
+}
+
+.hero,
+.category-card {
+  backdrop-filter: blur(1px) saturate(.78) brightness(.98) !important;
+  -webkit-backdrop-filter: blur(1px) saturate(.78) brightness(.98) !important;
+}
+
+@media (max-width: 700px) {
+  body {
+    background-size: 100vw auto !important;
+    background-position: center top !important;
+    background-attachment: scroll !important;
+  }
+
+  .hero,
+  .category-card {
+    backdrop-filter: blur(.75px) saturate(.78) brightness(.98) !important;
+    -webkit-backdrop-filter: blur(.75px) saturate(.78) brightness(.98) !important;
+  }
+}
