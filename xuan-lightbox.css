@@ -26,6 +26,7 @@ body {
     radial-gradient(48% 18% at 74% 19%, rgba(173,118,73,.08), transparent 72%),
     radial-gradient(72% 28% at 18% 70%, rgba(121,79,56,.09), transparent 72%),
     linear-gradient(180deg, #241912 0%, #1d140f 40%, #281a13 72%, #1a120e 100%) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang TC", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif !important;
 }
 
 /* Xuan lightbox: translucent, matte, softly illuminated from within — never glossy glass. */
@@ -94,6 +95,72 @@ body {
   -webkit-backdrop-filter: brightness(1.06) saturate(.62) blur(.25px) !important;
 }
 
+/* Typography: modern sans, substantial and clear. The material carries the poetry; type stays precise. */
+.brand-name,
+.category-title,
+.dialog h2,
+.confirm-card h2 {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang TC", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif !important;
+  font-style: normal !important;
+  text-shadow: none !important;
+}
+
+.brand-name {
+  font-weight: 700 !important;
+  letter-spacing: -.035em !important;
+  line-height: .96 !important;
+}
+
+.brand-subtitle {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: .035em !important;
+  color: rgba(235,216,184,.68) !important;
+}
+
+.category-title {
+  font-weight: 650 !important;
+  letter-spacing: -.01em !important;
+  color: rgba(242,222,189,.95) !important;
+}
+
+.search-pill input,
+.app-label,
+.add-category-button,
+.popover button,
+.category-menu button,
+.button,
+.field,
+.inline-sortbar,
+.toast {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.search-pill input {
+  font-weight: 500 !important;
+}
+
+.app-label {
+  font-weight: 500 !important;
+  color: rgba(235,215,182,.78) !important;
+}
+
+.add-category-button,
+.popover button,
+.category-menu button,
+.button,
+.field,
+.inline-sortbar,
+.toast {
+  font-weight: 500 !important;
+}
+
+.dialog h2,
+.confirm-card h2 {
+  font-weight: 650 !important;
+  letter-spacing: -.015em !important;
+}
+
 @media (max-width: 560px) {
   body::before {
     opacity: .55 !important;
@@ -107,5 +174,13 @@ body {
       rgba(168,126,89,.12) !important;
     backdrop-filter: brightness(1.15) saturate(.57) blur(.25px) !important;
     -webkit-backdrop-filter: brightness(1.15) saturate(.57) blur(.25px) !important;
+  }
+
+  .brand-name {
+    font-size: 42px !important;
+  }
+
+  .category-title {
+    font-size: 19px !important;
   }
 }
