@@ -161,6 +161,62 @@ body {
   letter-spacing: -.015em !important;
 }
 
+/* Category menu must keep its own positioning. The hero settings control is the only absolute one. */
+.category-head > .category-settings-wrap {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 120 !important;
+  flex: 0 0 auto !important;
+}
+
+.category-head > .category-settings-wrap .category-menu {
+  top: 42px !important;
+  right: 0 !important;
+  z-index: 140 !important;
+  pointer-events: auto !important;
+}
+
+.category-menu,
+.category-menu button,
+.inline-sortbar,
+.inline-sortbar button,
+.sort-controls,
+.sort-controls button {
+  pointer-events: auto !important;
+}
+
+/* Grain must continue inside top-layer UI such as dialog/popover. */
+.popover,
+.category-menu,
+.inline-sortbar,
+.dialog-card,
+.toast {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='112' viewBox='0 0 112 112'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' seed='41' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.66'/%3E%3C/svg%3E"),
+    linear-gradient(145deg, rgba(187,141,99,.055), transparent 42%),
+    rgba(48,34,26,.955) !important;
+  background-size: 112px 112px, auto, auto !important;
+  background-blend-mode: soft-light, normal, normal !important;
+}
+
+.dialog-card {
+  border-color: rgba(241,219,183,.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,200,.055),
+    0 28px 76px rgba(8,5,3,.42) !important;
+}
+
+.dialog::backdrop {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='126' height='126' viewBox='0 0 126 126'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='4' seed='47' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E"),
+    rgba(17,11,8,.72) !important;
+  background-size: 126px 126px, auto !important;
+  background-blend-mode: soft-light, normal !important;
+  backdrop-filter: blur(5px) saturate(.72) !important;
+  -webkit-backdrop-filter: blur(5px) saturate(.72) !important;
+}
+
 @media (max-width: 560px) {
   body::before {
     opacity: .55 !important;
