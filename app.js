@@ -152,7 +152,7 @@ function createCategory(category, categoryIndex, visibleApps) {
   title.textContent = category.name;
 
   const menuWrap = document.createElement("div");
-  menuWrap.className = "settings-wrap";
+  menuWrap.className = "settings-wrap category-settings-wrap";
 
   const menuButton = document.createElement("button");
   menuButton.type = "button";
@@ -296,7 +296,10 @@ function smallMoveButton(text, label, handler, disabled = false) {
   button.title = label;
   button.setAttribute("aria-label", label);
   button.disabled = disabled;
-  button.addEventListener("click", handler);
+  button.addEventListener("click", event => {
+    event.stopPropagation();
+    if (!button.disabled) handler();
+  });
   return button;
 }
 
@@ -312,6 +315,7 @@ function menuAction(label, symbol, handler, disabled = false) {
   button.append(text, icon);
 
   button.addEventListener("click", event => {
+    event.preventDefault();
     event.stopPropagation();
     closeAllMenus();
     if (!button.disabled) handler();
@@ -334,7 +338,7 @@ function closeAllMenus(except = null) {
 
 document.addEventListener("click", () => closeAllMenus());
 
-function beginSort(mode, categoryId, message) {
+function startSortSession(mode, categoryId, message) {
   if (!sortSession) {
     sortSession = {
       mode,
@@ -342,7 +346,10 @@ function beginSort(mode, categoryId, message) {
       snapshot: clone(state),
       message: message || (mode === "app" ? `正在調整「${getCategory(categoryId).name}」App 順序` : "分類順序已變更")
     };
-  } else if (sortSession.mode !== mode || sortSession.categoryId !== categoryId) {
+    return;
+  }
+
+  if (sortSession.mode !== mode || sortSession.categoryId !== categoryId) {
     state = clone(sortSession.snapshot);
     sortSession = {
       mode,
@@ -350,34 +357,41 @@ function beginSort(mode, categoryId, message) {
       snapshot: clone(state),
       message: message || (mode === "app" ? `正在調整「${getCategory(categoryId).name}」App 順序` : "分類順序已變更")
     };
-  } else if (message) {
-    sortSession.message = message;
+    return;
   }
+
+  if (message) sortSession.message = message;
+}
+
+function beginSort(mode, categoryId, message) {
+  startSortSession(mode, categoryId, message);
   render();
 }
 
 function moveCategory(categoryId, direction) {
   if (!sortSession || sortSession.mode !== "category" || sortSession.categoryId !== categoryId) {
-    beginSort("category", categoryId, "分類順序已變更");
+    startSortSession("category", categoryId, "分類順序已變更");
   }
 
   const index = getCategoryIndex(categoryId);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= state.categories.length) return;
+
   [state.categories[index], state.categories[target]] = [state.categories[target], state.categories[index]];
   render();
 }
 
 function moveApp(categoryId, appId, direction) {
-  const category = getCategory(categoryId);
-  if (!category) return;
   if (!sortSession || sortSession.mode !== "app" || sortSession.categoryId !== categoryId) {
-    beginSort("app", categoryId);
+    startSortSession("app", categoryId);
   }
 
+  const category = getCategory(categoryId);
+  if (!category) return;
   const index = category.apps.findIndex(app => app.id === appId);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= category.apps.length) return;
+
   [category.apps[index], category.apps[target]] = [category.apps[target], category.apps[index]];
   render();
 }
@@ -620,7 +634,7 @@ function normalizeUrl(raw) {
   if (!value) throw new Error("missing url");
   if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
   const url = new URL(value);
-  if (!['http:', 'https:'].includes(url.protocol)) throw new Error("invalid protocol");
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error("invalid protocol");
   return url.href;
 }
 
