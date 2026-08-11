@@ -1,7 +1,13 @@
 :root {
-  --iron: #2f3337;
-  --iron-deep: #24282c;
-  --iron-soft: #454a4f;
+  color-scheme: dark;
+  --iron: #202326;
+  --iron-deep: #171a1d;
+  --iron-soft: #303438;
+  --xuan: #565a58;
+  --xuan-deep: #454947;
+  --xuan-text: rgba(246,246,241,.94);
+  --xuan-muted: rgba(246,246,241,.60);
+  --xuan-border: rgba(246,246,241,.16);
 }
 
 html {
@@ -10,65 +16,106 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 18% 0%, rgba(255,255,255,.065), transparent 24rem),
-    radial-gradient(circle at 92% 12%, rgba(255,255,255,.025), transparent 20rem),
-    linear-gradient(180deg, #393e43 0%, var(--iron) 36%, var(--iron-deep) 100%);
+    radial-gradient(ellipse at 14% -4%, rgba(255,255,255,.055), transparent 28rem),
+    radial-gradient(ellipse at 88% 16%, rgba(255,255,255,.018), transparent 25rem),
+    radial-gradient(ellipse at 45% 72%, rgba(0,0,0,.16), transparent 34rem),
+    linear-gradient(180deg, #292d30 0%, var(--iron) 40%, var(--iron-deep) 100%);
+  color: var(--xuan-text);
 }
 
-/* Hero and category cards share one glass material. */
+/*
+ * Xuan paper material: matte, slightly translucent, with faint crossed fibres
+ * and uneven pools of light. Hero and category cards intentionally share it.
+ */
 .hero,
 .category-card {
-  color: rgba(255,255,255,.94);
-  border-color: rgba(255,255,255,.17);
+  color: var(--xuan-text);
+  border-color: var(--xuan-border);
   background:
-    linear-gradient(145deg, rgba(255,255,255,.125), rgba(255,255,255,.045)),
-    rgba(82,88,94,.72);
+    radial-gradient(ellipse at 14% 0%, rgba(255,255,255,.105), transparent 34%),
+    radial-gradient(ellipse at 90% 100%, rgba(0,0,0,.13), transparent 44%),
+    repeating-linear-gradient(8deg, rgba(255,255,255,.016) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(97deg, rgba(0,0,0,.014) 0 1px, transparent 1px 7px),
+    rgba(82,86,84,.73);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.20),
-    inset 0 -1px 0 rgba(0,0,0,.055),
-    0 18px 42px rgba(12,15,18,.20);
-  backdrop-filter: blur(24px) saturate(.72);
-  -webkit-backdrop-filter: blur(24px) saturate(.72);
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 0 30px rgba(255,255,255,.018),
+    inset 0 -1px 0 rgba(0,0,0,.10),
+    0 22px 46px rgba(4,6,8,.22);
+  backdrop-filter: blur(10px) saturate(.55);
+  -webkit-backdrop-filter: blur(10px) saturate(.55);
+}
+
+.hero::before,
+.category-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: .42;
+  background:
+    repeating-linear-gradient(12deg, transparent 0 7px, rgba(255,255,255,.020) 7px 8px, transparent 8px 15px),
+    repeating-linear-gradient(101deg, transparent 0 10px, rgba(0,0,0,.018) 10px 11px, transparent 11px 21px),
+    radial-gradient(circle at 24% 36%, rgba(255,255,255,.028) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 72% 66%, rgba(0,0,0,.032) 0 1px, transparent 1.7px);
+  background-size: auto, auto, 27px 29px, 33px 31px;
+  mix-blend-mode: soft-light;
+}
+
+.hero > *,
+.category-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .hero {
   padding: 20px;
 }
 
+/* Light should feel absorbed by paper, not emitted by glass. */
 .hero-glow {
-  background: rgba(255,255,255,.10);
-  filter: blur(34px);
+  background: rgba(255,255,255,.075);
+  filter: blur(42px);
+  mix-blend-mode: soft-light;
 }
 
 .hero-glow-a {
-  width: 220px;
-  height: 106px;
-  right: -64px;
-  top: -54px;
-  opacity: .45;
+  width: 235px;
+  height: 118px;
+  right: -70px;
+  top: -62px;
+  opacity: .34;
 }
 
 .hero-glow-b {
-  width: 118px;
-  height: 58px;
-  left: 24%;
-  bottom: -34px;
-  opacity: .22;
+  width: 135px;
+  height: 66px;
+  left: 22%;
+  bottom: -40px;
+  opacity: .16;
 }
 
-.hero .brand-name {
-  color: rgba(255,255,255,.96);
+.hero .brand-name,
+.category-title {
+  color: rgba(248,248,244,.96);
 }
 
 .hero .brand-subtitle {
-  color: rgba(255,255,255,.62);
+  color: rgba(246,246,241,.58);
 }
 
-.hero-settings {
-  border-color: rgba(255,255,255,.17);
-  background: rgba(255,255,255,.055);
-  color: rgba(255,255,255,.68);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+.hero-settings,
+.category-card .icon-button {
+  border-color: rgba(246,246,241,.15);
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,.07), transparent 60%),
+    rgba(18,21,23,.16);
+  color: rgba(246,246,241,.66);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    0 6px 14px rgba(5,7,9,.09);
 }
 
 .hero-search-row {
@@ -82,58 +129,62 @@ body {
 .search-pill {
   width: min(100%, 250px);
   min-height: 38px;
-  border-color: rgba(255,255,255,.15);
+  border-color: rgba(246,246,241,.13);
   background:
-    linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.025)),
-    rgba(41,46,51,.34);
+    repeating-linear-gradient(8deg, rgba(255,255,255,.012) 0 1px, transparent 1px 5px),
+    rgba(18,21,23,.28);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.11),
-    0 8px 18px rgba(12,15,18,.09);
+    inset 0 1px 0 rgba(255,255,255,.065),
+    inset 0 0 18px rgba(0,0,0,.07),
+    0 8px 18px rgba(5,7,9,.09);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .search-icon {
-  color: rgba(255,255,255,.58);
+  color: rgba(246,246,241,.50);
 }
 
 .search-pill input {
-  color: rgba(255,255,255,.92);
+  color: rgba(248,248,244,.92);
 }
 
 .search-pill input::placeholder {
-  color: rgba(255,255,255,.46);
+  color: rgba(246,246,241,.40);
 }
 
-/* Global three-dot popovers on the iron theme. */
+/* Popovers are dense ink-paper so content behind them never bleeds through. */
 .popover,
 .category-menu {
-  border-color: rgba(255,255,255,.12);
+  border-color: rgba(246,246,241,.12);
   background:
-    linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
-    rgba(47,52,57,.985);
-  color: rgba(255,255,255,.88);
+    radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.055), transparent 42%),
+    repeating-linear-gradient(9deg, rgba(255,255,255,.012) 0 1px, transparent 1px 5px),
+    rgba(35,39,39,.985);
+  color: rgba(248,248,244,.88);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.07),
-    0 20px 52px rgba(9,11,13,.32);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 22px 54px rgba(2,4,5,.36);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .popover button,
 .category-menu button {
-  color: rgba(255,255,255,.86);
+  color: rgba(248,248,244,.86);
 }
 
 .popover button:hover,
 .category-menu button:hover {
-  background: rgba(255,255,255,.065);
+  background: rgba(255,255,255,.055);
 }
 
 .popover .menu-divider,
 .category-menu .menu-divider {
-  background: rgba(255,255,255,.10);
+  background: rgba(246,246,241,.09);
 }
 
-/* Keep an open category menu above the following cards. */
+/* Keep an open category menu above following cards. */
 .category-wrap {
   position: relative;
   z-index: 1;
@@ -155,52 +206,44 @@ body {
   z-index: 90;
 }
 
-.category-title {
-  color: rgba(255,255,255,.94);
-}
-
-.category-card .icon-button {
-  border-color: rgba(255,255,255,.17);
-  background: rgba(255,255,255,.055);
-  color: rgba(255,255,255,.68);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
-}
-
 .category-card .app-main {
-  color: rgba(255,255,255,.92);
+  color: rgba(248,248,244,.92);
 }
 
+/* App circles become dark ink wells; the web app artwork itself stays original-color. */
 .category-card .app-circle {
-  border-color: rgba(255,255,255,.15);
+  border-color: rgba(246,246,241,.13);
   background:
-    linear-gradient(145deg, rgba(255,255,255,.095), rgba(255,255,255,.024)),
-    rgba(41,46,51,.42);
+    radial-gradient(circle at 34% 24%, rgba(255,255,255,.075), transparent 58%),
+    repeating-linear-gradient(10deg, rgba(255,255,255,.010) 0 1px, transparent 1px 5px),
+    rgba(28,32,34,.34);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.13),
-    0 8px 20px rgba(11,14,17,.14);
+    inset 0 1px 0 rgba(255,255,255,.085),
+    inset 0 0 16px rgba(0,0,0,.055),
+    0 9px 20px rgba(4,6,8,.15);
 }
 
 .category-card .app-main:hover .app-circle {
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.18),
-    0 11px 25px rgba(11,14,17,.18);
+    inset 0 1px 0 rgba(255,255,255,.11),
+    inset 0 0 16px rgba(0,0,0,.045),
+    0 12px 25px rgba(4,6,8,.20);
 }
 
 .category-card .app-initial {
-  color: rgba(255,255,255,.78);
+  color: rgba(246,246,241,.74);
 }
 
-/* PWA artwork is large enough to read, while preserving its full canvas. */
 .category-card .app-favicon {
-  width: 38px;
-  height: 38px;
+  width: 25px;
+  height: 25px;
   object-fit: contain;
-  filter: grayscale(1) brightness(1.7) contrast(.72);
-  opacity: .86;
+  filter: none;
+  opacity: 1;
 }
 
-/* App names can breathe onto a second line instead of looking like metadata was truncated. */
 .app-label {
+  color: rgba(248,248,244,.88);
   max-width: 96px;
   white-space: normal;
   overflow: hidden;
@@ -214,65 +257,157 @@ body {
 }
 
 .category-card .app-add .app-circle {
-  border-color: rgba(255,255,255,.24);
-  background: rgba(255,255,255,.025);
-  color: rgba(255,255,255,.62);
+  border-color: rgba(246,246,241,.21);
+  background: rgba(18,21,23,.09);
+  color: rgba(246,246,241,.56);
   box-shadow: none;
 }
 
 .category-card .app-add .app-label {
-  color: rgba(255,255,255,.58);
+  color: rgba(246,246,241,.50);
 }
 
 .category-card.is-sorting .app-item:not(.app-add) .app-circle {
-  outline-color: rgba(255,255,255,.22);
+  outline-color: rgba(246,246,241,.19);
 }
 
 .category-card .sort-controls button {
-  border-color: rgba(255,255,255,.16);
-  background: rgba(255,255,255,.06);
-  color: rgba(255,255,255,.68);
+  border-color: rgba(246,246,241,.14);
+  background: rgba(18,21,23,.20);
+  color: rgba(246,246,241,.66);
 }
 
 .inline-sortbar {
-  border-color: rgba(255,255,255,.13);
+  border-color: rgba(246,246,241,.12);
   background:
-    linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025)),
-    rgba(57,62,67,.78);
+    radial-gradient(ellipse at 10% 0%, rgba(255,255,255,.06), transparent 46%),
+    repeating-linear-gradient(8deg, rgba(255,255,255,.012) 0 1px, transparent 1px 5px),
+    rgba(65,69,67,.76);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.11),
-    0 12px 26px rgba(17,20,23,.14);
-  backdrop-filter: blur(20px);
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 13px 28px rgba(4,6,8,.16);
+  backdrop-filter: blur(10px);
 }
 
 .inline-sortbar p {
-  color: rgba(255,255,255,.62);
+  color: rgba(246,246,241,.58);
 }
 
 .sort-cancel {
-  color: rgba(255,255,255,.60);
+  color: rgba(246,246,241,.56);
 }
 
 .sort-save {
-  border-color: rgba(255,255,255,.17);
-  background: rgba(255,255,255,.085);
-  color: rgba(255,255,255,.92);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+  border-color: rgba(246,246,241,.15);
+  background: rgba(255,255,255,.065);
+  color: rgba(248,248,244,.92);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
 }
 
 .add-category-button {
-  border-color: rgba(255,255,255,.22);
-  color: rgba(255,255,255,.66);
-  background: rgba(255,255,255,.022);
+  border-color: rgba(246,246,241,.18);
+  color: rgba(246,246,241,.58);
+  background: rgba(255,255,255,.012);
 }
 
 .add-category-button:hover {
-  background: rgba(255,255,255,.05);
+  background: rgba(255,255,255,.035);
 }
 
 .empty-search {
-  border-color: rgba(255,255,255,.20);
-  color: rgba(255,255,255,.62);
+  border-color: rgba(246,246,241,.16);
+  color: rgba(246,246,241,.57);
+}
+
+/* Dialogs and feedback use the same dense xuan-paper family. */
+.dialog {
+  color: rgba(248,248,244,.94);
+}
+
+.dialog::backdrop {
+  background: rgba(10,12,14,.66);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dialog-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(246,246,241,.13);
+  background:
+    radial-gradient(ellipse at 14% 0%, rgba(255,255,255,.07), transparent 36%),
+    repeating-linear-gradient(9deg, rgba(255,255,255,.014) 0 1px, transparent 1px 6px),
+    rgba(58,62,60,.98);
+  color: rgba(248,248,244,.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 28px 78px rgba(2,4,5,.38);
+}
+
+.dialog-head p,
+.confirm-card p {
+  color: rgba(246,246,241,.56);
+}
+
+.dialog-close {
+  border-color: rgba(246,246,241,.14);
+  color: rgba(246,246,241,.60);
+}
+
+.field {
+  color: rgba(248,248,244,.82);
+}
+
+.field input {
+  border-color: rgba(246,246,241,.12);
+  background: rgba(16,19,21,.25);
+  color: rgba(248,248,244,.94);
+}
+
+.field input:focus {
+  border-color: rgba(246,246,241,.24);
+  background: rgba(16,19,21,.34);
+}
+
+.field input::placeholder {
+  color: rgba(246,246,241,.37);
+}
+
+.field-error {
+  color: rgba(246,246,241,.50);
+}
+
+.button-quiet {
+  color: rgba(246,246,241,.58);
+}
+
+.button-primary {
+  border-color: rgba(246,246,241,.17);
+  background:
+    radial-gradient(circle at 30% 10%, rgba(255,255,255,.08), transparent 58%),
+    rgba(255,255,255,.055);
+  color: rgba(248,248,244,.94);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+.toast {
+  border-color: rgba(246,246,241,.13);
+  background:
+    repeating-linear-gradient(8deg, rgba(255,255,255,.012) 0 1px, transparent 1px 5px),
+    rgba(43,47,46,.97);
+  box-shadow: 0 16px 38px rgba(2,4,5,.28);
+  color: rgba(248,248,244,.90);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.toast-dot {
+  background: rgba(248,248,244,.76);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline-color: rgba(246,246,241,.34);
 }
 
 @media (max-width: 560px) {
@@ -289,8 +424,11 @@ body {
   .hero,
   .category-card {
     background:
-      linear-gradient(145deg, rgba(255,255,255,.14), rgba(255,255,255,.045)),
-      rgba(82,88,94,.76);
+      radial-gradient(ellipse at 15% 0%, rgba(255,255,255,.105), transparent 35%),
+      radial-gradient(ellipse at 88% 100%, rgba(0,0,0,.13), transparent 45%),
+      repeating-linear-gradient(8deg, rgba(255,255,255,.017) 0 1px, transparent 1px 5px),
+      repeating-linear-gradient(97deg, rgba(0,0,0,.014) 0 1px, transparent 1px 7px),
+      rgba(82,86,84,.77);
   }
 
   .brand-mark {
@@ -324,13 +462,14 @@ body {
   .popover,
   .category-menu {
     background:
-      linear-gradient(145deg, rgba(255,255,255,.05), rgba(255,255,255,.012)),
-      rgba(47,52,57,.995);
+      radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.05), transparent 42%),
+      repeating-linear-gradient(9deg, rgba(255,255,255,.012) 0 1px, transparent 1px 5px),
+      rgba(35,39,39,.995);
   }
 
   .category-card .app-favicon {
-    width: 40px;
-    height: 40px;
+    width: 25px;
+    height: 25px;
   }
 
   .app-label {
