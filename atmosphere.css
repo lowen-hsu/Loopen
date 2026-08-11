@@ -1,65 +1,49 @@
 /*
- * Loopen atmosphere — warm smoky xuan paper.
- * Inspired by low-light editorial print: tea-brown paper, deep shadow,
- * soft natural light and visible grain. Functional layout stays untouched.
+ * Loopen atmosphere — direct reference-image background.
+ * The background artwork comes from the image supplied in chat; this layer
+ * no longer tries to recreate its light, grain or colour with CSS.
  */
 
 :root {
-  --mood-bg: #2c241d;
-  --mood-bg-deep: #171411;
-  --mood-paper: rgba(103, 87, 69, .60);
-  --mood-paper-deep: rgba(54, 45, 37, .55);
-  --mood-cream: rgba(226, 207, 177, .94);
-  --mood-cream-soft: rgba(218, 198, 169, .61);
-  --mood-line: rgba(225, 207, 178, .12);
+  --mood-cream: rgba(232, 215, 187, .94);
+  --mood-muted: rgba(226, 208, 179, .58);
+  --mood-line: rgba(231, 214, 186, .13);
+  --mood-panel: rgba(58, 48, 40, .30);
+  --mood-panel-strong: rgba(43, 35, 29, .92);
 }
 
 html {
-  background: var(--mood-bg-deep);
+  background: #241d18;
 }
 
 body {
   position: relative;
   isolation: isolate;
   color: var(--mood-cream);
-  background:
-    radial-gradient(ellipse at 78% 11%, rgba(124, 103, 77, .16), transparent 31rem),
-    radial-gradient(ellipse at 18% 61%, rgba(111, 92, 71, .11), transparent 36rem),
-    linear-gradient(180deg, #211b17 0%, #312820 30%, #4a3d31 58%, #3b3027 78%, #241e19 100%);
+  background: #241d18 !important;
 }
 
-/* Broad low-light shapes. Think shadow falling over paper, not a glowing UI. */
+/* The actual supplied image, web-compressed and embedded in the repo. */
 body::before {
-  content: "";
-  position: fixed;
-  z-index: 0;
-  inset: -12vh -12vw;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 46rem 22rem at 18% 7%, rgba(3, 3, 2, .54) 0 27%, rgba(12, 9, 7, .28) 42%, transparent 72%),
-    radial-gradient(ellipse 36rem 17rem at 88% 24%, rgba(6, 5, 4, .34) 0 20%, transparent 69%),
-    radial-gradient(ellipse 26rem 17rem at 23% 56%, rgba(184, 154, 114, .09) 0 18%, rgba(153, 126, 94, .04) 38%, transparent 72%),
-    radial-gradient(ellipse 28rem 20rem at 77% 68%, rgba(177, 147, 108, .07) 0 17%, transparent 70%),
-    radial-gradient(ellipse 25rem 13rem at 18% 91%, rgba(9, 7, 5, .27) 0 22%, transparent 71%);
-  filter: blur(34px);
-  transform: rotate(-2deg) scale(1.07);
-  opacity: .94;
-}
-
-/* Print-like grain. Stronger than the previous xuan version, but still fine. */
-body::after {
   content: "";
   position: fixed;
   z-index: 0;
   inset: 0;
   pointer-events: none;
-  opacity: .31;
-  mix-blend-mode: soft-light;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.72'/%3E%3C/svg%3E"),
-    repeating-linear-gradient(8deg, rgba(255,245,225,.013) 0 1px, transparent 1px 5px),
-    repeating-linear-gradient(94deg, rgba(24,17,12,.021) 0 1px, transparent 1px 7px);
-  background-size: 180px 180px, auto, auto;
+  background-image: url("assets/space-heal-reference.svg");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+/* Only a very light readability veil; no simulated light or grain. */
+body::after {
+  content: "";
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(24, 18, 14, .10);
 }
 
 .page-shell,
@@ -69,79 +53,34 @@ body::after {
   z-index: 2;
 }
 
-/* Sheets feel like translucent warm paper, not glass panels. */
 .hero,
 .category-card {
   position: relative;
   overflow: hidden;
   color: var(--mood-cream);
   border-color: var(--mood-line) !important;
-  background:
-    linear-gradient(155deg, rgba(205, 178, 137, .075), rgba(61, 49, 39, .08)),
-    rgba(91, 75, 60, .44) !important;
+  background: var(--mood-panel) !important;
   box-shadow:
-    inset 0 1px 0 rgba(233, 213, 180, .075),
-    inset 0 -1px 0 rgba(20, 14, 10, .18),
-    inset 0 0 52px rgba(214, 182, 139, .018),
-    0 27px 64px rgba(8, 6, 5, .27) !important;
-  backdrop-filter: blur(3px) saturate(.46) !important;
-  -webkit-backdrop-filter: blur(3px) saturate(.46) !important;
+    inset 0 1px 0 rgba(245, 226, 194, .055),
+    0 18px 48px rgba(10, 7, 5, .18) !important;
+  backdrop-filter: blur(10px) saturate(.72) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(.72) !important;
 }
 
-/* Paper fibres inside each card. */
+/* Disable the previous generated texture/light layers inside cards. */
 .hero::before,
-.category-card::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: .31;
-  mix-blend-mode: soft-light;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.68'/%3E%3C/svg%3E"),
-    repeating-linear-gradient(6deg, transparent 0 9px, rgba(244,225,194,.014) 9px 10px, transparent 10px 19px);
-  background-size: 150px 150px, auto;
-}
-
-/* Soft shadow/light moves across the sheet in large quiet areas. */
 .hero::after,
+.category-card::before,
 .category-card::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: -20%;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 46% 32% at 11% 11%, rgba(10, 7, 5, .31) 0 26%, transparent 72%),
-    radial-gradient(ellipse 35% 28% at 81% 17%, rgba(217, 183, 134, .075) 0 17%, transparent 70%),
-    radial-gradient(ellipse 44% 34% at 27% 83%, rgba(196, 163, 119, .055) 0 16%, transparent 72%),
-    radial-gradient(ellipse 38% 28% at 88% 84%, rgba(13, 9, 7, .17) 0 24%, transparent 74%);
-  filter: blur(20px);
-  transform: rotate(-3deg) scale(1.08);
-  opacity: .78;
-}
-
-.category-card::after {
-  opacity: .48;
-}
-
-.hero > *,
-.category-card > * {
-  position: relative;
-  z-index: 1;
+  content: none !important;
 }
 
 .hero-glow {
-  opacity: .04 !important;
-  filter: blur(56px) !important;
+  display: none !important;
 }
 
-/* Typography: warmer editorial contrast. */
 .brand-name {
-  color: rgba(231, 213, 184, .95) !important;
+  color: rgba(236, 219, 190, .96) !important;
   font-family: "Iowan Old Style", "Baskerville", "Times New Roman", "Songti TC", serif !important;
   font-weight: 400 !important;
   letter-spacing: -.025em !important;
@@ -149,121 +88,112 @@ body::after {
 }
 
 .brand-subtitle {
-  color: rgba(218, 199, 170, .49) !important;
-  letter-spacing: .045em !important;
+  color: rgba(226, 209, 180, .52) !important;
+  letter-spacing: .04em !important;
 }
 
 .category-title {
-  color: rgba(230, 212, 184, .88) !important;
+  color: rgba(234, 216, 188, .91) !important;
   font-family: "Songti TC", "Noto Serif TC", "PMingLiU", serif !important;
   font-weight: 500 !important;
   letter-spacing: .055em !important;
 }
 
-/* Quiet controls melt into the paper. */
 .hero-settings,
 .category-card .icon-button {
-  border-color: rgba(225, 207, 178, .11) !important;
-  background: rgba(27, 21, 17, .14) !important;
-  color: rgba(222, 203, 174, .49) !important;
-  box-shadow: inset 0 1px 0 rgba(235, 214, 181, .04), 0 8px 20px rgba(7, 5, 4, .08) !important;
+  border-color: rgba(231, 214, 186, .12) !important;
+  background: rgba(31, 25, 21, .22) !important;
+  color: rgba(226, 208, 178, .55) !important;
+  box-shadow: inset 0 1px 0 rgba(245, 226, 194, .04) !important;
 }
 
 .search-pill {
-  border-color: rgba(225, 207, 178, .09) !important;
-  background: rgba(26, 21, 17, .19) !important;
-  box-shadow: inset 0 1px 0 rgba(235, 214, 181, .035), inset 0 0 24px rgba(9,7,5,.07) !important;
-  backdrop-filter: blur(3px) !important;
+  border-color: rgba(231, 214, 186, .10) !important;
+  background: rgba(31, 25, 21, .26) !important;
+  box-shadow: inset 0 1px 0 rgba(245, 226, 194, .035) !important;
+  backdrop-filter: blur(9px) !important;
+  -webkit-backdrop-filter: blur(9px) !important;
 }
 
 .search-icon {
-  color: rgba(217, 198, 169, .36) !important;
+  color: rgba(226, 208, 178, .42) !important;
 }
 
 .search-pill input {
-  color: rgba(230, 212, 184, .82) !important;
+  color: rgba(235, 217, 188, .88) !important;
 }
 
 .search-pill input::placeholder {
-  color: rgba(215, 196, 167, .31) !important;
+  color: rgba(220, 202, 173, .36) !important;
 }
 
-/* App wells are dark embossing, logos are toned down to keep the scene cohesive. */
 .category-card .app-circle {
-  border-color: rgba(225, 207, 178, .09) !important;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(219, 188, 143, .052), transparent 50%),
-    rgba(28, 22, 18, .20) !important;
+  border-color: rgba(231, 214, 186, .10) !important;
+  background: rgba(29, 23, 19, .24) !important;
   box-shadow:
-    inset 0 1px 0 rgba(234, 213, 181, .042),
-    inset 0 0 18px rgba(8,6,5,.09),
-    0 10px 26px rgba(7,5,4,.13) !important;
+    inset 0 1px 0 rgba(243, 224, 191, .04),
+    0 8px 22px rgba(8, 6, 5, .13) !important;
 }
 
 .category-card .app-main:hover .app-circle {
   transform: translateY(-1px) !important;
   box-shadow:
-    inset 0 1px 0 rgba(234, 213, 181, .055),
-    inset 0 0 18px rgba(8,6,5,.07),
-    0 13px 30px rgba(7,5,4,.18) !important;
+    inset 0 1px 0 rgba(243, 224, 191, .055),
+    0 11px 27px rgba(8, 6, 5, .17) !important;
 }
 
 .category-card .app-favicon {
   width: 25px !important;
   height: 25px !important;
   object-fit: contain !important;
-  filter: grayscale(.72) sepia(.30) saturate(.52) brightness(.98) contrast(.82) !important;
-  opacity: .66 !important;
+  filter: grayscale(.72) sepia(.24) saturate(.55) brightness(1.02) contrast(.84) !important;
+  opacity: .72 !important;
 }
 
 .category-card .app-initial {
-  color: rgba(224, 205, 175, .58) !important;
+  color: rgba(226, 208, 178, .63) !important;
 }
 
 .app-label {
-  color: rgba(224, 206, 177, .70) !important;
-  font-weight: 400 !important;
-  letter-spacing: .012em !important;
+  color: rgba(228, 210, 181, .75) !important;
 }
 
 .category-card .app-add .app-circle {
-  border-color: rgba(225, 207, 178, .13) !important;
-  background: rgba(24, 19, 16, .08) !important;
-  color: rgba(218, 199, 170, .39) !important;
+  border-color: rgba(231, 214, 186, .14) !important;
+  background: rgba(28, 22, 18, .12) !important;
+  color: rgba(221, 203, 174, .43) !important;
   box-shadow: none !important;
 }
 
 .category-card .app-add .app-label {
-  color: rgba(216, 197, 168, .36) !important;
+  color: rgba(219, 201, 172, .40) !important;
 }
 
-/* Dense paper for transient UI. */
 .popover,
 .category-menu,
 .inline-sortbar,
 .dialog-card,
 .toast {
-  border-color: rgba(225, 207, 178, .09) !important;
-  background:
-    radial-gradient(ellipse at 16% 0%, rgba(209, 178, 133, .045), transparent 42%),
-    rgba(47, 38, 31, .975) !important;
-  color: rgba(228, 210, 181, .82) !important;
-  box-shadow: inset 0 1px 0 rgba(235, 214, 181, .04), 0 26px 64px rgba(7,5,4,.34) !important;
-  backdrop-filter: blur(8px) !important;
+  border-color: rgba(231, 214, 186, .10) !important;
+  background: var(--mood-panel-strong) !important;
+  color: rgba(234, 216, 187, .86) !important;
+  box-shadow: 0 24px 60px rgba(8, 6, 5, .34) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
 }
 
 .popover button,
 .category-menu button {
-  color: rgba(226, 207, 177, .75) !important;
+  color: rgba(230, 212, 183, .80) !important;
 }
 
 .popover button:hover,
 .category-menu button:hover {
-  background: rgba(220, 190, 145, .035) !important;
+  background: rgba(231, 214, 186, .045) !important;
 }
 
 .menu-divider {
-  background: rgba(225, 207, 178, .06) !important;
+  background: rgba(231, 214, 186, .07) !important;
 }
 
 .inline-sortbar p,
@@ -271,84 +201,61 @@ body::after {
 .dialog-head p,
 .confirm-card p,
 .field-error {
-  color: rgba(214, 195, 166, .46) !important;
+  color: rgba(220, 202, 173, .49) !important;
 }
 
 .sort-save,
 .button-primary {
-  border-color: rgba(225, 207, 178, .11) !important;
-  background: rgba(218, 187, 143, .045) !important;
-  color: rgba(230, 212, 182, .81) !important;
-  box-shadow: inset 0 1px 0 rgba(235,214,181,.05) !important;
+  border-color: rgba(231, 214, 186, .12) !important;
+  background: rgba(228, 210, 181, .055) !important;
+  color: rgba(235, 217, 188, .85) !important;
 }
 
 .add-category-button {
-  border-color: rgba(225, 207, 178, .11) !important;
-  color: rgba(214, 195, 166, .44) !important;
-  background: rgba(218, 187, 143, .005) !important;
+  border-color: rgba(231, 214, 186, .12) !important;
+  color: rgba(219, 201, 172, .47) !important;
+  background: rgba(42, 34, 28, .12) !important;
+  backdrop-filter: blur(8px);
 }
 
 .dialog::backdrop {
-  background: rgba(19, 15, 12, .75) !important;
-  backdrop-filter: blur(9px) !important;
+  background: rgba(18, 14, 11, .72) !important;
+  backdrop-filter: blur(8px) !important;
 }
 
 .dialog h2,
 .field {
-  color: rgba(229, 210, 180, .82) !important;
+  color: rgba(234, 216, 187, .86) !important;
 }
 
 .field input {
-  border-color: rgba(225, 207, 178, .085) !important;
-  background: rgba(21, 17, 14, .23) !important;
-  color: rgba(229, 210, 180, .82) !important;
+  border-color: rgba(231, 214, 186, .09) !important;
+  background: rgba(24, 19, 16, .30) !important;
+  color: rgba(234, 216, 187, .86) !important;
 }
 
 .field input::placeholder {
-  color: rgba(211, 192, 163, .27) !important;
+  color: rgba(215, 197, 168, .30) !important;
 }
 
 .toast-dot {
-  background: rgba(225, 205, 175, .59) !important;
+  background: rgba(229, 211, 181, .62) !important;
 }
 
 button:focus-visible,
 input:focus-visible {
-  outline-color: rgba(225, 207, 178, .25) !important;
+  outline-color: rgba(231, 214, 186, .27) !important;
 }
 
 @media (max-width: 560px) {
-  body {
-    background:
-      radial-gradient(ellipse at 82% 4%, rgba(121, 100, 76, .14), transparent 21rem),
-      linear-gradient(180deg, #211b17 0%, #332920 34%, #46392d 62%, #2b241d 100%);
-  }
-
   body::before {
-    background:
-      radial-gradient(ellipse 24rem 13rem at 13% 2%, rgba(5,4,3,.52) 0 28%, transparent 72%),
-      radial-gradient(ellipse 17rem 12rem at 91% 29%, rgba(13,9,7,.25) 0 20%, transparent 68%),
-      radial-gradient(ellipse 14rem 11rem at 13% 65%, rgba(178,149,111,.065) 0 17%, transparent 70%),
-      radial-gradient(ellipse 15rem 13rem at 82% 86%, rgba(10,7,5,.20) 0 20%, transparent 72%);
-    filter: blur(27px);
-  }
-
-  body::after {
-    opacity: .34;
+    background-position: center center;
   }
 
   .hero,
   .category-card {
-    background:
-      linear-gradient(155deg, rgba(199, 170, 129, .073), rgba(61, 49, 39, .075)),
-      rgba(91, 75, 60, .48) !important;
-  }
-
-  .brand-name {
-    font-size: 22px !important;
-  }
-
-  .category-title {
-    letter-spacing: .045em !important;
+    background: rgba(58, 48, 40, .34) !important;
+    backdrop-filter: blur(9px) saturate(.70) !important;
+    -webkit-backdrop-filter: blur(9px) saturate(.70) !important;
   }
 }
