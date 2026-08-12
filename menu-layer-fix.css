@@ -1,0 +1,66 @@
+/* Loopen — category menu hit-area fix.
+   The visual lightbox layers create stacking contexts. Keep the open menu above
+   the card content and adjacent cards, and temporarily disable pointer hits on
+   the App lane underneath the menu. */
+
+.category-wrap {
+  position: relative !important;
+  z-index: 1;
+}
+
+.category-card {
+  overflow: visible !important;
+}
+
+/* The menu lives inside category-head. Raise the whole head above app-grid;
+   a high z-index on the menu alone cannot escape its parent stacking context. */
+.category-card > .category-head {
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+.category-card > .app-grid {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Chrome/Safari support :has; use the visible menu state as the stacking trigger. */
+.category-wrap:has(.category-menu:not([hidden])) {
+  z-index: 1000 !important;
+}
+
+.category-wrap:has(.category-menu:not([hidden])) .category-card {
+  z-index: 1001 !important;
+}
+
+.category-wrap:has(.category-menu:not([hidden])) .category-head {
+  z-index: 1100 !important;
+}
+
+.category-wrap:has(.category-menu:not([hidden])) .category-settings-wrap {
+  position: relative !important;
+  z-index: 1200 !important;
+}
+
+.category-wrap:has(.category-menu:not([hidden])) .category-menu {
+  z-index: 1300 !important;
+  pointer-events: auto !important;
+}
+
+.category-wrap:has(.category-menu:not([hidden])) .category-menu button {
+  position: relative !important;
+  z-index: 1301 !important;
+  pointer-events: auto !important;
+}
+
+/* Nothing visually underneath an open menu is allowed to steal the click. */
+.category-wrap:has(.category-menu:not([hidden])) .app-grid,
+.category-wrap:has(.category-menu:not([hidden])) .app-grid * {
+  pointer-events: none !important;
+}
+
+.category-card::before,
+.category-card::after,
+.category-head::after {
+  pointer-events: none !important;
+}
