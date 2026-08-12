@@ -31,7 +31,6 @@ module.exports = async function handler(req, res) {
     const linkedManifest = links.find(link => link.rel.includes("manifest") && link.href);
     if (linkedManifest) manifestUrls.push(new URL(decodeHtmlEntities(linkedManifest.href), pageUrl).href);
 
-    /* Some small/self-hosted PWAs expose a manifest without a usable <link rel="manifest">. */
     manifestUrls.push(
       new URL("/manifest.webmanifest", pageUrl).href,
       new URL("/manifest.json", pageUrl).href
@@ -54,7 +53,7 @@ module.exports = async function handler(req, res) {
             purpose: String(icon.purpose || "any").toLowerCase(),
             sizes: String(icon.sizes || ""),
             type: String(icon.type || ""),
-            score: manifestIconScore(icon)
+            score: 10_000_000 + manifestIconScore(icon)
           });
         }
       } catch (error) {
@@ -69,10 +68,15 @@ module.exports = async function handler(req, res) {
         purpose: null,
         sizes: link.sizes || "",
         type: link.type || "",
-        score: 6_000_000 + htmlIconScore(link)
+        score: 20_000_000 + htmlIconScore(link)
       });
     }
 
+    /*
+     * Match browser behaviour first: a page's explicit favicon is the canonical
+     * identity Chrome shows in the tab. Manifest artwork is only a fallback for
+     * launcher-quality images, not a replacement for a valid page favicon.
+     */
     for (const link of links.filter(link => link.href && link.rel.includes("icon") && !link.rel.includes("apple-touch-icon"))) {
       candidates.push({
         url: new URL(decodeHtmlEntities(link.href), pageUrl).href,
@@ -80,7 +84,7 @@ module.exports = async function handler(req, res) {
         purpose: null,
         sizes: link.sizes || "",
         type: link.type || "",
-        score: 2_000_000 + htmlIconScore(link)
+        score: 30_000_000 + htmlIconScore(link)
       });
     }
 
@@ -101,7 +105,7 @@ module.exports = async function handler(req, res) {
       iconSource: best.source,
       iconPurpose: best.purpose,
       iconSizes: best.sizes,
-      iconCandidates: candidates.slice(0, 6).map(candidate => ({
+      iconCandidates: candidates.slice(0, 8).map(candidate => ({
         icon: candidate.url,
         iconSource: candidate.source,
         iconPurpose: candidate.purpose,
@@ -228,11 +232,11 @@ function manifestIconScore(icon) {
   const type = String(icon.type || "").toLowerCase();
   const src = String(icon.src || "").toLowerCase();
   let score = rasterSizeScore(icon.sizes);
-  if (purpose.includes("any")) score += 9_000_000;
-  else if (purpose.includes("maskable")) score += 4_000_000;
-  if (purpose.includes("monochrome")) score -= 9_000_000;
-  if (type.includes("png") || src.includes(".png")) score += 3_000_000;
-  else if (type.includes("webp") || src.includes(".webp")) score += 2_500_000;
+  if (purpose.includes("any")) score += 3_000_000;
+  else if (purpose.includes("maskable")) score += 1_500_000;
+  if (purpose.includes("monochrome")) score -= 6_000_000;
+  if (type.includes("png") || src.includes(".png")) score += 2_000_000;
+  else if (type.includes("webp") || src.includes(".webp")) score += 1_500_000;
   else if (type.includes("svg") || src.includes(".svg")) score += 250_000;
   return score;
 }
@@ -244,6 +248,7 @@ function htmlIconScore(icon) {
   if (type.includes("png") || href.includes(".png")) score += 1_500_000;
   else if (type.includes("webp") || href.includes(".webp")) score += 1_250_000;
   else if (type.includes("svg") || href.includes(".svg")) score += 100_000;
+  else if (href.includes("favicon.ico") || type.includes("icon")) score += 75_000;
   return score;
 }
 
