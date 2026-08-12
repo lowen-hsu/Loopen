@@ -1,24 +1,24 @@
-/* Loopen App icons — frosted glass blocks.
-   Keep favicon identity clean; unify the launcher through the container material instead of tinting the artwork itself. */
+/* Loopen App icons — glass block + glass artwork.
+   The outer tile is frosted glass, and the favicon itself is rendered as a translucent coloured-glass mark. */
 
 .category-card .app-circle {
   position: relative !important;
   overflow: hidden !important;
   isolation: isolate !important;
   border-radius: 17px !important;
-  border: 1px solid rgba(246, 226, 195, .22) !important;
+  border: 1px solid rgba(246, 226, 195, .18) !important;
   background:
-    linear-gradient(145deg, rgba(255, 244, 224, .13), rgba(255, 255, 255, .035) 42%, rgba(74, 51, 39, .11)),
-    rgba(155, 117, 88, .10) !important;
+    linear-gradient(145deg, rgba(255, 244, 224, .105), rgba(255, 255, 255, .025) 42%, rgba(74, 51, 39, .09)),
+    rgba(155, 117, 88, .085) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 244, 224, .18),
-    inset 0 -1px 0 rgba(74, 48, 35, .12),
-    0 8px 22px rgba(8, 5, 3, .12) !important;
-  backdrop-filter: blur(8px) saturate(.72) brightness(1.10) !important;
-  -webkit-backdrop-filter: blur(8px) saturate(.72) brightness(1.10) !important;
+    inset 0 1px 0 rgba(255, 244, 224, .15),
+    inset 0 -1px 0 rgba(74, 48, 35, .10),
+    0 8px 22px rgba(8, 5, 3, .10) !important;
+  backdrop-filter: blur(9px) saturate(.64) brightness(1.09) !important;
+  -webkit-backdrop-filter: blur(9px) saturate(.64) brightness(1.09) !important;
 }
 
-/* Soft internal reflection, like a thin warm glass tile catching ambient light. */
+/* Soft reflection within the outer glass tile. */
 .category-card .app-circle::before {
   content: "" !important;
   position: absolute !important;
@@ -27,27 +27,44 @@
   border-radius: inherit !important;
   pointer-events: none !important;
   background:
-    radial-gradient(circle at 28% 18%, rgba(255, 246, 228, .18), transparent 42%),
-    linear-gradient(155deg, rgba(255, 239, 214, .07), transparent 46%, rgba(255, 255, 255, .025) 72%, transparent) !important;
-  opacity: .82 !important;
+    radial-gradient(circle at 28% 18%, rgba(255, 246, 228, .15), transparent 42%),
+    linear-gradient(155deg, rgba(255, 239, 214, .055), transparent 46%, rgba(255, 255, 255, .02) 72%, transparent) !important;
+  opacity: .76 !important;
 }
 
+/*
+ * The favicon itself is also glass:
+ * semi-transparent colour, lower chroma, screen blending and a tiny translucent
+ * edge so it no longer reads as a solid bitmap sticker sitting on glass.
+ */
 .category-card .app-favicon {
   width: 25px !important;
   height: 25px !important;
   max-width: 25px !important;
   max-height: 25px !important;
+  box-sizing: border-box !important;
   object-fit: contain !important;
   position: relative !important;
   z-index: 2 !important;
 
-  /* Keep brand colour recognizable, only gently quiet the saturation. */
-  filter: saturate(.72) contrast(.94) brightness(.96) !important;
-  opacity: .96 !important;
-  mix-blend-mode: normal !important;
+  padding: 1px !important;
+  border-radius: 7px !important;
+  border: 1px solid rgba(255, 241, 218, .13) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 247, 232, .10), rgba(255,255,255,.015) 48%, rgba(74,50,38,.045)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, .13),
+    inset 0 -1px 0 rgba(74, 49, 36, .06),
+    0 2px 5px rgba(7, 4, 3, .045) !important;
+
+  filter: saturate(.44) contrast(.84) brightness(1.08) !important;
+  opacity: .78 !important;
+  mix-blend-mode: screen !important;
+  backdrop-filter: blur(3px) saturate(.52) brightness(1.10) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(.52) brightness(1.10) !important;
 }
 
-/* Very fine surface grain belongs to the glass, not the favicon artwork. */
+/* Fine surface grain stays on the outer glass only; it must not muddy the favicon. */
 .category-card .app-item .app-circle::after {
   content: "" !important;
   position: absolute !important;
@@ -55,7 +72,7 @@
   z-index: 3 !important;
   border-radius: inherit !important;
   pointer-events: none !important;
-  opacity: .20 !important;
+  opacity: .16 !important;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' seed='67' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.48'/%3E%3C/svg%3E") !important;
   background-size: 72px 72px !important;
@@ -69,8 +86,8 @@
 }
 
 .category-card .app-add .app-circle {
-  color: rgba(239, 218, 186, .78) !important;
+  color: rgba(239, 218, 186, .74) !important;
   background:
-    linear-gradient(145deg, rgba(255, 244, 224, .09), rgba(255, 255, 255, .02) 45%, rgba(74, 51, 39, .08)),
-    rgba(144, 106, 80, .075) !important;
+    linear-gradient(145deg, rgba(255, 244, 224, .075), rgba(255, 255, 255, .015) 45%, rgba(74, 51, 39, .065)),
+    rgba(144, 106, 80, .065) !important;
 }
