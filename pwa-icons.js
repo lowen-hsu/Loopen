@@ -1,6 +1,6 @@
 /* Enhances Loopen with server-side PWA manifest discovery for newly added apps. */
 
-const ICON_META_VERSION = 3;
+const ICON_META_VERSION = 4;
 const iconRepairInFlight = new Set();
 
 async function fetchAppMetadata(url) {
@@ -71,9 +71,8 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
 };
 
 /*
- * Normal stored icons are never reset. Only icons that are clearly unsuitable
- * for a launcher (non-square artwork or weak favicon fallback sources) are
- * checked for a better square candidate.
+ * Preserve normal stored icons. Re-check icons that are clearly unsuitable for
+ * a launcher: odd aspect ratios, weak/unknown sources, or very small favicons.
  */
 async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
   const category = getCategory(categoryId);
@@ -82,11 +81,12 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
 
   const ratio = imageElement.naturalWidth / imageElement.naturalHeight;
   const weirdAspect = ratio < 0.8 || ratio > 1.25;
-  const weakSource = app.iconSource === "icon" || app.iconSource === "favicon-fallback";
+  const lowResolution = Math.min(imageElement.naturalWidth, imageElement.naturalHeight) < 48;
+  const weakSource = !app.iconSource || app.iconSource === "icon" || app.iconSource === "favicon-fallback";
   const weakSvg = /\.svg(?:\?|$)/i.test(app.icon) && app.iconSource !== "manifest";
 
-  if (!weirdAspect && !weakSource && !weakSvg) return;
-  if (Number(app.iconMetaVersion || 0) >= ICON_META_VERSION && !weirdAspect) return;
+  if (!weirdAspect && !lowResolution && !weakSource && !weakSvg) return;
+  if (Number(app.iconMetaVersion || 0) >= ICON_META_VERSION && !weirdAspect && !lowResolution) return;
   if (iconRepairInFlight.has(app.id)) return;
 
   iconRepairInFlight.add(app.id);
@@ -108,6 +108,7 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
       if (!dimensions) continue;
       const candidateRatio = dimensions.width / dimensions.height;
       if (candidateRatio < 0.88 || candidateRatio > 1.14) continue;
+      if (Math.min(dimensions.width, dimensions.height) < 48) continue;
 
       app.icon = candidate.icon;
       app.iconSource = candidate.iconSource || "icon";
