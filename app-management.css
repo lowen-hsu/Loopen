@@ -41,17 +41,25 @@
   opacity: 1 !important;
 }
 
-/* In App management mode, left/right/delete fit underneath each icon without widening the lane. */
+/* Management mode: left / right / edit / delete sit underneath each icon. */
 .app-manage-controls {
-  width: 70px;
+  width: 76px;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
+  margin-left: -3px;
+  margin-right: -3px;
 }
 
 .category-card .app-manage-controls button {
-  width: 22px;
+  width: 18px;
   height: 22px;
-  border-radius: 7px;
+  flex: 0 0 18px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 10px;
+}
+
+.category-card .app-edit-button {
   font-size: 11px;
 }
 
@@ -71,12 +79,15 @@
   }
 
   .app-item,
-  .app-label,
-  .app-manage-controls {
+  .app-label {
     width: 68px;
   }
 
   .app-item {
     flex-basis: 68px;
+  }
+
+  .app-manage-controls {
+    width: 74px;
   }
 }
