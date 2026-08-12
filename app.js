@@ -12,11 +12,7 @@ const defaultState = {
         { id: "odoo", name: "Odoo", url: "https://www.odoo.com/", icon: "https://www.odoo.com/favicon.ico" }
       ]
     },
-    {
-      id: "store",
-      name: "店務",
-      apps: []
-    },
+    { id: "store", name: "店務", apps: [] },
     {
       id: "ai",
       name: "AI 工具",
@@ -58,7 +54,6 @@ let confirmAction = null;
 let sortSession = null;
 let toastTimer = null;
 
-setGreeting();
 render();
 
 function clone(value) {
@@ -77,6 +72,7 @@ function loadState() {
   } catch (error) {
     console.warn("Loopen storage could not be read.", error);
   }
+
   const initial = clone(defaultState);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
   return initial;
@@ -84,11 +80,6 @@ function loadState() {
 
 function persistState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function setGreeting() {
-  const hour = new Date().getHours();
-  document.getElementById("greeting").textContent = hour < 12 ? "早安" : hour < 18 ? "下午好" : "晚上好";
 }
 
 function showToast(message) {
@@ -108,21 +99,37 @@ function getCategoryIndex(categoryId) {
   return state.categories.findIndex(category => category.id === categoryId);
 }
 
+function normalizedSearchActive() {
+  return query.trim().length > 0;
+}
+
 function render() {
   categoryList.replaceChildren();
+
   const normalizedQuery = query.trim().toLocaleLowerCase("zh-Hant");
   let visibleCount = 0;
 
   state.categories.forEach((category, categoryIndex) => {
-    const categoryMatches = normalizedQuery && category.name.toLocaleLowerCase("zh-Hant").includes(normalizedQuery);
-    const matchingApps = normalizedQuery
-      ? category.apps.filter(app => app.name.toLocaleLowerCase("zh-Hant").includes(normalizedQuery))
+    const categoryMatches =
+      normalizedQuery &&
+      category.name.toLocaleLowerCase("zh-Hant").includes(normalizedQuery);
+
+    const visibleApps = normalizedQuery
+      ? category.apps.filter(app =>
+          app.name.toLocaleLowerCase("zh-Hant").includes(normalizedQuery)
+        )
       : category.apps;
 
-    if (normalizedQuery && !categoryMatches && matchingApps.length === 0) return;
+    if (normalizedQuery && !categoryMatches && visibleApps.length === 0) return;
 
     visibleCount += 1;
-    categoryList.appendChild(createCategory(category, categoryIndex, categoryMatches ? category.apps : matchingApps));
+    categoryList.appendChild(
+      createCategory(
+        category,
+        categoryIndex,
+        categoryMatches ? category.apps : visibleApps
+      )
+    );
   });
 
   if (normalizedQuery && visibleCount === 0) {
@@ -141,7 +148,11 @@ function createCategory(category, categoryIndex, visibleApps) {
   const card = document.createElement("section");
   card.className = "category-card";
   card.setAttribute("aria-labelledby", `category-title-${category.id}`);
-  if (sortSession?.mode === "app" && sortSession.categoryId === category.id) card.classList.add("is-sorting");
+
+  const managingApps =
+    sortSession?.mode === "app" && sortSession.categoryId === category.id;
+
+  if (managingApps) card.classList.add("is-sorting");
 
   const head = document.createElement("div");
   head.className = "category-head";
@@ -167,19 +178,33 @@ function createCategory(category, categoryIndex, visibleApps) {
 
   menu.append(
     menuAction("修改分類名稱", "✎", () => openCategoryRename(category.id)),
-    menuAction("調整 App 順序", "↔", () => beginSort("app", category.id)),
+    menuAction("管理 App", "↔", () => beginAppManagement(category.id)),
     divider(),
-    menuAction("分類往上", "↑", () => moveCategory(category.id, -1), categoryIndex === 0),
-    menuAction("分類往下", "↓", () => moveCategory(category.id, 1), categoryIndex === state.categories.length - 1),
+    menuAction(
+      "分類往上",
+      "↑",
+      () => moveCategory(category.id, -1),
+      categoryIndex === 0
+    ),
+    menuAction(
+      "分類往下",
+      "↓",
+      () => moveCategory(category.id, 1),
+      categoryIndex === state.categories.length - 1
+    ),
     divider(),
     menuAction("刪除分類", "×", () => requestCategoryDelete(category.id))
   );
 
   menuButton.addEventListener("click", event => {
+    event.preventDefault();
     event.stopPropagation();
-    closeAllMenus(menu);
-    menu.hidden = !menu.hidden;
-    menuButton.setAttribute("aria-expanded", String(!menu.hidden));
+
+    const willOpen = menu.hidden;
+    closeAllMenus();
+
+    menu.hidden = !willOpen;
+    menuButton.setAttribute("aria-expanded", String(willOpen));
   });
 
   menuWrap.append(menuButton, menu);
@@ -192,7 +217,12 @@ function createCategory(category, categoryIndex, visibleApps) {
     grid.appendChild(createAppItem(category, app));
   });
 
-  if (!normalizedSearchActive() || category.name.toLocaleLowerCase("zh-Hant").includes(query.trim().toLocaleLowerCase("zh-Hant"))) {
+  if (
+    !normalizedSearchActive() ||
+    category.name
+      .toLocaleLowerCase("zh-Hant")
+      .includes(query.trim().toLocaleLowerCase("zh-Hant"))
+  ) {
     grid.appendChild(createAddAppItem(category.id));
   }
 
@@ -204,10 +234,6 @@ function createCategory(category, categoryIndex, visibleApps) {
   }
 
   return wrap;
-}
-
-function normalizedSearchActive() {
-  return query.trim().length > 0;
 }
 
 function createAppItem(category, app) {
@@ -234,13 +260,19 @@ function createAppItem(category, app) {
     icon.src = app.icon;
     icon.alt = "";
     icon.loading = "lazy";
+
     icon.addEventListener("load", () => {
       initial.hidden = true;
+      if (typeof repairAppIconIfNeeded === "function") {
+        repairAppIconIfNeeded(category.id, app.id, icon);
+      }
     });
+
     icon.addEventListener("error", () => {
       icon.remove();
       initial.hidden = false;
     });
+
     circle.appendChild(icon);
   }
 
@@ -250,17 +282,38 @@ function createAppItem(category, app) {
 
   main.append(circle, label);
   main.addEventListener("click", () => {
-    if (sortSession?.mode === "app" && sortSession.categoryId === category.id) return;
+    if (sortSession?.mode === "app" && sortSession.categoryId === category.id) {
+      return;
+    }
     window.open(app.url, "_blank", "noopener,noreferrer");
   });
 
   const controls = document.createElement("div");
-  controls.className = "sort-controls";
+  controls.className = "sort-controls app-manage-controls";
+
   const index = category.apps.findIndex(candidate => candidate.id === app.id);
 
+  const deleteButton = smallMoveButton(
+    "×",
+    "刪除 App",
+    () => requestAppDelete(category.id, app.id)
+  );
+  deleteButton.classList.add("app-delete-button");
+
   controls.append(
-    smallMoveButton("←", "往左移", () => moveApp(category.id, app.id, -1), index === 0),
-    smallMoveButton("→", "往右移", () => moveApp(category.id, app.id, 1), index === category.apps.length - 1)
+    smallMoveButton(
+      "←",
+      "往左移",
+      () => moveApp(category.id, app.id, -1),
+      index === 0
+    ),
+    smallMoveButton(
+      "→",
+      "往右移",
+      () => moveApp(category.id, app.id, 1),
+      index === category.apps.length - 1
+    ),
+    deleteButton
   );
 
   item.append(main, controls);
@@ -285,6 +338,7 @@ function createAddAppItem(categoryId) {
 
   button.append(circle, label);
   button.addEventListener("click", () => openAddApp(categoryId));
+
   item.appendChild(button);
   return item;
 }
@@ -296,10 +350,13 @@ function smallMoveButton(text, label, handler, disabled = false) {
   button.title = label;
   button.setAttribute("aria-label", label);
   button.disabled = disabled;
+
   button.addEventListener("click", event => {
+    event.preventDefault();
     event.stopPropagation();
     if (!button.disabled) handler();
   });
+
   return button;
 }
 
@@ -310,16 +367,22 @@ function menuAction(label, symbol, handler, disabled = false) {
 
   const text = document.createElement("span");
   text.textContent = label;
+
   const icon = document.createElement("span");
   icon.textContent = symbol;
+
   button.append(text, icon);
 
   button.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
+
+    if (button.disabled) return;
+
     closeAllMenus();
-    if (!button.disabled) handler();
+    handler();
   });
+
   return button;
 }
 
@@ -333,66 +396,87 @@ function closeAllMenus(except = null) {
   document.querySelectorAll(".category-menu, .popover").forEach(menu => {
     if (menu !== except) menu.hidden = true;
   });
-  document.querySelectorAll('[aria-expanded="true"]').forEach(button => button.setAttribute("aria-expanded", "false"));
+
+  document
+    .querySelectorAll('[aria-expanded="true"]')
+    .forEach(button => button.setAttribute("aria-expanded", "false"));
 }
 
 document.addEventListener("click", () => closeAllMenus());
 
-function startSortSession(mode, categoryId, message) {
+function switchSortSession(mode, categoryId, message) {
+  if (
+    sortSession &&
+    (sortSession.mode !== mode || sortSession.categoryId !== categoryId)
+  ) {
+    state = clone(sortSession.snapshot);
+    sortSession = null;
+  }
+
   if (!sortSession) {
     sortSession = {
       mode,
       categoryId,
       snapshot: clone(state),
-      message: message || (mode === "app" ? `正在調整「${getCategory(categoryId).name}」App 順序` : "分類順序已變更")
+      message
     };
-    return;
+  } else if (message) {
+    sortSession.message = message;
   }
-
-  if (sortSession.mode !== mode || sortSession.categoryId !== categoryId) {
-    state = clone(sortSession.snapshot);
-    sortSession = {
-      mode,
-      categoryId,
-      snapshot: clone(state),
-      message: message || (mode === "app" ? `正在調整「${getCategory(categoryId).name}」App 順序` : "分類順序已變更")
-    };
-    return;
-  }
-
-  if (message) sortSession.message = message;
 }
 
-function beginSort(mode, categoryId, message) {
-  startSortSession(mode, categoryId, message);
+function beginAppManagement(categoryId) {
+  const category = getCategory(categoryId);
+  if (!category) return;
+
+  switchSortSession(
+    "app",
+    categoryId,
+    `正在管理「${category.name}」App`
+  );
+
   render();
 }
 
 function moveCategory(categoryId, direction) {
-  if (!sortSession || sortSession.mode !== "category" || sortSession.categoryId !== categoryId) {
-    startSortSession("category", categoryId, "分類順序已變更");
-  }
+  const category = getCategory(categoryId);
+  if (!category) return;
+
+  switchSortSession("category", categoryId, "分類順序已變更");
 
   const index = getCategoryIndex(categoryId);
   const target = index + direction;
+
   if (index < 0 || target < 0 || target >= state.categories.length) return;
 
-  [state.categories[index], state.categories[target]] = [state.categories[target], state.categories[index]];
+  [state.categories[index], state.categories[target]] = [
+    state.categories[target],
+    state.categories[index]
+  ];
+
   render();
 }
 
 function moveApp(categoryId, appId, direction) {
-  if (!sortSession || sortSession.mode !== "app" || sortSession.categoryId !== categoryId) {
-    startSortSession("app", categoryId);
-  }
-
   const category = getCategory(categoryId);
   if (!category) return;
+
+  switchSortSession(
+    "app",
+    categoryId,
+    `正在管理「${category.name}」App`
+  );
+
   const index = category.apps.findIndex(app => app.id === appId);
   const target = index + direction;
+
   if (index < 0 || target < 0 || target >= category.apps.length) return;
 
-  [category.apps[index], category.apps[target]] = [category.apps[target], category.apps[index]];
+  [category.apps[index], category.apps[target]] = [
+    category.apps[target],
+    category.apps[index]
+  ];
+
   render();
 }
 
@@ -401,7 +485,8 @@ function createSortBar(category) {
   bar.className = "inline-sortbar";
 
   const message = document.createElement("p");
-  message.textContent = sortSession?.message || `正在調整「${category.name}」順序`;
+  message.textContent =
+    sortSession?.message || `正在調整「${category.name}」順序`;
 
   const actions = document.createElement("div");
   actions.className = "sort-actions";
@@ -415,31 +500,71 @@ function createSortBar(category) {
   const save = document.createElement("button");
   save.type = "button";
   save.className = "sort-save";
-  save.textContent = "儲存排序";
+  save.textContent = sortSession?.mode === "app" ? "儲存變更" : "儲存排序";
   save.addEventListener("click", saveSort);
 
   actions.append(cancel, save);
   bar.append(message, actions);
+
   return bar;
 }
 
 function saveSort() {
   if (!sortSession) return;
+
   persistState();
   sortSession = null;
   render();
-  showToast("順序已儲存");
+  showToast("變更已儲存");
 }
 
 function cancelSort() {
   if (!sortSession) return;
+
   state = clone(sortSession.snapshot);
   sortSession = null;
   render();
-  showToast("已取消排序變更");
+  showToast("已取消變更");
 }
 
-function createField(labelText, id, { type = "text", placeholder = "", value = "", autocomplete = "off" } = {}) {
+function requestAppDelete(categoryId, appId) {
+  const category = getCategory(categoryId);
+  const app = category?.apps.find(candidate => candidate.id === appId);
+  if (!category || !app) return;
+
+  confirmTitle.textContent = `刪除「${app.name}」？`;
+  confirmDescription.textContent =
+    "刪除後會從這個分類移除。若你正在管理 App，可用下方的「取消」復原。";
+  confirmSubmit.textContent = "刪除";
+
+  confirmAction = () => {
+    const currentCategory = getCategory(categoryId);
+    if (!currentCategory) return;
+
+    currentCategory.apps = currentCategory.apps.filter(
+      candidate => candidate.id !== appId
+    );
+
+    if (
+      !sortSession ||
+      sortSession.mode !== "app" ||
+      sortSession.categoryId !== categoryId
+    ) {
+      persistState();
+    }
+
+    render();
+    showToast(`${app.name} 已移除`);
+  };
+
+  confirmDialog.showModal();
+}
+
+function createField(
+  labelText,
+  id,
+  { type = "text", placeholder = "", value = "", autocomplete = "off" } = {}
+) {
   const label = document.createElement("label");
   label.className = "field";
   label.setAttribute("for", id);
@@ -470,12 +595,24 @@ function openAddApp(categoryId) {
   dialogDescription.textContent = `加入到「${category.name}」`;
   dialogFields.replaceChildren();
 
-  const urlField = createField("網址", "app-url", { type: "url", placeholder: "https://...", autocomplete: "url" });
-  const nameField = createField("名稱", "app-name", { placeholder: "Web App 名稱" });
+  const urlField = createField("網址", "app-url", {
+    type: "url",
+    placeholder: "https://...",
+    autocomplete: "url"
+  });
+
+  const nameField = createField("名稱", "app-name", {
+    placeholder: "Web App 名稱"
+  });
+
   dialogFields.append(urlField.label, nameField.label);
 
   let nameTouched = false;
-  nameField.input.addEventListener("input", () => { nameTouched = nameField.input.value.trim().length > 0; });
+
+  nameField.input.addEventListener("input", () => {
+    nameTouched = nameField.input.value.trim().length > 0;
+  });
+
   urlField.input.addEventListener("blur", () => {
     if (nameTouched || nameField.input.value.trim()) return;
     const suggestion = nameFromUrl(urlField.input.value);
@@ -491,7 +628,10 @@ function openAddCategory() {
   dialogDescription.textContent = "建立一個新的收藏區域";
   dialogFields.replaceChildren();
 
-  const nameField = createField("分類名稱", "category-name", { placeholder: "例如：設計工具" });
+  const nameField = createField("分類名稱", "category-name", {
+    placeholder: "例如：設計工具"
+  });
+
   dialogFields.appendChild(nameField.label);
   openFormDialog(nameField.input);
 }
@@ -505,13 +645,17 @@ function openCategoryRename(categoryId) {
   dialogDescription.textContent = "讓名稱更符合你的使用方式";
   dialogFields.replaceChildren();
 
-  const nameField = createField("分類名稱", "category-name", { value: category.name });
+  const nameField = createField("分類名稱", "category-name", {
+    value: category.name
+  });
+
   dialogFields.appendChild(nameField.label);
   openFormDialog(nameField.input, true);
 }
 
 function openFormDialog(focusTarget, select = false) {
   formDialog.showModal();
+
   requestAnimationFrame(() => {
     focusTarget?.focus();
     if (select) focusTarget?.select();
@@ -533,13 +677,16 @@ dialogForm.addEventListener("submit", event => {
 
   if (formContext.type === "add-app") submitAddApp(formContext.categoryId);
   if (formContext.type === "add-category") submitAddCategory();
-  if (formContext.type === "rename-category") submitCategoryRename(formContext.categoryId);
+  if (formContext.type === "rename-category") {
+    submitCategoryRename(formContext.categoryId);
+  }
 });
 
 function submitAddApp(categoryId) {
   const category = getCategory(categoryId);
   const urlInput = document.getElementById("app-url");
   const nameInput = document.getElementById("app-name");
+
   clearFieldErrors();
 
   let normalizedUrl;
@@ -552,6 +699,7 @@ function submitAddApp(categoryId) {
   }
 
   const name = nameInput.value.trim() || nameFromUrl(normalizedUrl);
+
   if (!name) {
     setFieldError("app-name", "請輸入 App 名稱");
     nameInput.focus();
@@ -559,12 +707,14 @@ function submitAddApp(categoryId) {
   }
 
   const parsed = new URL(normalizedUrl);
+
   category.apps.push({
     id: uid("app"),
     name,
     url: normalizedUrl,
     icon: `${parsed.origin}/favicon.ico`
   });
+
   persistState();
   closeFormDialog();
   render();
@@ -574,6 +724,7 @@ function submitAddApp(categoryId) {
 function submitAddCategory() {
   const input = document.getElementById("category-name");
   const name = input.value.trim();
+
   clearFieldErrors();
 
   if (!name) {
@@ -582,13 +733,24 @@ function submitAddCategory() {
     return;
   }
 
-  if (state.categories.some(category => category.name.toLocaleLowerCase("zh-Hant") === name.toLocaleLowerCase("zh-Hant"))) {
+  if (
+    state.categories.some(
+      category =>
+        category.name.toLocaleLowerCase("zh-Hant") ===
+        name.toLocaleLowerCase("zh-Hant")
+    )
+  ) {
     setFieldError("category-name", "已經有同名分類了");
     input.focus();
     return;
   }
 
-  state.categories.push({ id: uid("category"), name, apps: [] });
+  state.categories.push({
+    id: uid("category"),
+    name,
+    apps: []
+  });
+
   persistState();
   closeFormDialog();
   render();
@@ -599,7 +761,10 @@ function submitCategoryRename(categoryId) {
   const input = document.getElementById("category-name");
   const category = getCategory(categoryId);
   const name = input.value.trim();
+
   clearFieldErrors();
+
+  if (!category) return;
 
   if (!name) {
     setFieldError("category-name", "請輸入分類名稱");
@@ -607,7 +772,14 @@ function submitCategoryRename(categoryId) {
     return;
   }
 
-  if (state.categories.some(candidate => candidate.id !== categoryId && candidate.name.toLocaleLowerCase("zh-Hant") === name.toLocaleLowerCase("zh-Hant"))) {
+  if (
+    state.categories.some(
+      candidate =>
+        candidate.id !== categoryId &&
+        candidate.name.toLocaleLowerCase("zh-Hant") ===
+          name.toLocaleLowerCase("zh-Hant")
+    )
+  ) {
     setFieldError("category-name", "已經有同名分類了");
     input.focus();
     return;
@@ -621,7 +793,9 @@ function submitCategoryRename(categoryId) {
 }
 
 function clearFieldErrors() {
-  document.querySelectorAll(".field-error").forEach(element => { element.textContent = ""; });
+  document.querySelectorAll(".field-error").forEach(element => {
+    element.textContent = "";
+  });
 }
 
 function setFieldError(id, message) {
@@ -631,10 +805,16 @@ function setFieldError(id, message) {
 
 function normalizeUrl(raw) {
   let value = raw.trim();
+
   if (!value) throw new Error("missing url");
   if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+
   const url = new URL(value);
-  if (!["http:", "https:"].includes(url.protocol)) throw new Error("invalid protocol");
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("invalid protocol");
+  }
+
   return url.href;
 }
 
@@ -643,7 +823,10 @@ function nameFromUrl(raw) {
     const normalized = normalizeUrl(raw);
     const host = new URL(normalized).hostname.replace(/^www\./, "");
     const first = host.split(".")[0].replace(/[-_]+/g, " ").trim();
-    return first ? first.charAt(0).toUpperCase() + first.slice(1) : "";
+
+    return first
+      ? first.charAt(0).toUpperCase() + first.slice(1)
+      : "";
   } catch {
     return "";
   }
@@ -652,34 +835,45 @@ function nameFromUrl(raw) {
 function requestCategoryDelete(categoryId) {
   const category = getCategory(categoryId);
   if (!category) return;
+
   confirmTitle.textContent = `刪除「${category.name}」？`;
   confirmDescription.textContent = category.apps.length
     ? `這個分類裡有 ${category.apps.length} 個 App，刪除後會一起移除。`
     : "刪除後這個分類會從首頁移除。";
   confirmSubmit.textContent = "刪除";
+
   confirmAction = () => {
-    state.categories = state.categories.filter(candidate => candidate.id !== categoryId);
+    state.categories = state.categories.filter(
+      candidate => candidate.id !== categoryId
+    );
+
     if (sortSession?.categoryId === categoryId) sortSession = null;
+
     persistState();
     render();
     showToast("分類已刪除");
   };
+
   confirmDialog.showModal();
 }
 
 function requestReset() {
   confirmTitle.textContent = "重設 Loopen？";
-  confirmDescription.textContent = "目前建立的分類與 App 會被範例資料取代。";
+  confirmDescription.textContent =
+    "目前建立的分類與 App 會被範例資料取代。";
   confirmSubmit.textContent = "重設";
+
   confirmAction = () => {
     state = clone(defaultState);
     sortSession = null;
     query = "";
     searchInput.value = "";
+
     persistState();
     render();
     showToast("Loopen 已重設");
   };
+
   confirmDialog.showModal();
 }
 
@@ -687,25 +881,37 @@ confirmCancel.addEventListener("click", () => {
   confirmDialog.close();
   confirmAction = null;
 });
+
 confirmSubmit.addEventListener("click", () => {
   const action = confirmAction;
+
   confirmDialog.close();
   confirmAction = null;
+
   action?.();
 });
 
 settingsButton.addEventListener("click", event => {
+  event.preventDefault();
   event.stopPropagation();
-  closeAllMenus(settingsMenu);
-  settingsMenu.hidden = !settingsMenu.hidden;
-  settingsButton.setAttribute("aria-expanded", String(!settingsMenu.hidden));
+
+  const willOpen = settingsMenu.hidden;
+  closeAllMenus();
+
+  settingsMenu.hidden = !willOpen;
+  settingsButton.setAttribute("aria-expanded", String(willOpen));
 });
-settingsMenu.querySelector('[data-setting-action="reset"]').addEventListener("click", event => {
-  event.stopPropagation();
-  settingsMenu.hidden = true;
-  settingsButton.setAttribute("aria-expanded", "false");
-  requestReset();
-});
+
+settingsMenu
+  .querySelector('[data-setting-action="reset"]')
+  .addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    settingsMenu.hidden = true;
+    settingsButton.setAttribute("aria-expanded", "false");
+    requestReset();
+  });
 
 searchInput.addEventListener("input", event => {
   query = event.target.value;
@@ -713,5 +919,12 @@ searchInput.addEventListener("input", event => {
 });
 
 window.addEventListener("keydown", event => {
-  if (event.key === "Escape" && sortSession && !formDialog.open && !confirmDialog.open) cancelSort();
+  if (
+    event.key === "Escape" &&
+    sortSession &&
+    !formDialog.open &&
+    !confirmDialog.open
+  ) {
+    cancelSort();
+  }
 });
