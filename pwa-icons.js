@@ -1,6 +1,6 @@
-/* Enhances Loopen with server-side PWA manifest discovery for newly added apps. */
+/* Resolves Loopen App icons from page metadata while preserving browser favicon identity. */
 
-const ICON_META_VERSION = 4;
+const ICON_META_VERSION = 5;
 const iconRepairInFlight = new Set();
 
 async function fetchAppMetadata(url) {
@@ -11,12 +11,12 @@ async function fetchAppMetadata(url) {
     if (!response.ok) return null;
     return await response.json();
   } catch (error) {
-    console.warn("Loopen PWA icon lookup unavailable; using favicon fallback.", error);
+    console.warn("Loopen icon lookup unavailable; using stored icon.", error);
     return null;
   }
 }
 
-submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
+submitAddApp = async function submitAddAppWithResolvedIcon(categoryId) {
   const category = getCategory(categoryId);
   const urlInput = document.getElementById("app-url");
   const nameInput = document.getElementById("app-name");
@@ -63,7 +63,7 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
     persistState();
     closeFormDialog();
     render();
-    showToast(metadata?.iconSource === "manifest" ? `${name} 已新增，並取得 PWA 圖示` : `${name} 已新增成功`);
+    showToast(`${name} 已新增成功`);
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = originalLabel;
@@ -71,8 +71,9 @@ submitAddApp = async function submitAddAppWithPwaIcon(categoryId) {
 };
 
 /*
- * Preserve normal stored icons. Re-check icons that are clearly unsuitable for
- * a launcher: odd aspect ratios, weak/unknown sources, or very small favicons.
+ * Existing stored icons from older resolver versions are migrated once so a
+ * manifest icon previously chosen over the browser favicon can be corrected.
+ * After migration, valid explicit page favicons are preserved even when small.
  */
 async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
   const category = getCategory(categoryId);
@@ -81,34 +82,43 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
 
   const ratio = imageElement.naturalWidth / imageElement.naturalHeight;
   const weirdAspect = ratio < 0.8 || ratio > 1.25;
-  const lowResolution = Math.min(imageElement.naturalWidth, imageElement.naturalHeight) < 48;
-  const weakSource = !app.iconSource || app.iconSource === "icon" || app.iconSource === "favicon-fallback";
-  const weakSvg = /\.svg(?:\?|$)/i.test(app.icon) && app.iconSource !== "manifest";
+  const staleResolver = Number(app.iconMetaVersion || 0) < ICON_META_VERSION;
+  const weakFallback = !app.iconSource || app.iconSource === "favicon-fallback";
 
-  if (!weirdAspect && !lowResolution && !weakSource && !weakSvg) return;
-  if (Number(app.iconMetaVersion || 0) >= ICON_META_VERSION && !weirdAspect && !lowResolution) return;
+  if (!staleResolver && !weirdAspect && !weakFallback) return;
   if (iconRepairInFlight.has(app.id)) return;
 
   iconRepairInFlight.add(app.id);
   try {
     const metadata = await fetchAppMetadata(app.url);
-    const candidates = Array.isArray(metadata?.iconCandidates) ? metadata.iconCandidates : [];
-    if (metadata?.icon && !candidates.some(candidate => candidate.icon === metadata.icon)) {
-      candidates.unshift({
-        icon: metadata.icon,
-        iconSource: metadata.iconSource,
-        iconPurpose: metadata.iconPurpose,
-        iconSizes: metadata.iconSizes
-      });
+
+    /* First choice is always the resolver's canonical browser-like favicon. */
+    if (metadata?.icon) {
+      const dimensions = await probeImage(metadata.icon);
+      const ratioOk = dimensions && dimensions.width > 0 && dimensions.height > 0 &&
+        dimensions.width / dimensions.height >= 0.8 &&
+        dimensions.width / dimensions.height <= 1.25;
+
+      if (ratioOk) {
+        app.icon = metadata.icon;
+        app.iconSource = metadata.iconSource || "icon";
+        app.iconPurpose = metadata.iconPurpose || null;
+        app.iconSizes = metadata.iconSizes || null;
+        app.iconMetaVersion = ICON_META_VERSION;
+        persistState();
+        render();
+        return;
+      }
     }
 
+    /* If the canonical favicon cannot load, use the next square candidate. */
+    const candidates = Array.isArray(metadata?.iconCandidates) ? metadata.iconCandidates : [];
     for (const candidate of candidates) {
       if (!candidate?.icon || candidate.icon === app.icon) continue;
       const dimensions = await probeImage(candidate.icon);
       if (!dimensions) continue;
       const candidateRatio = dimensions.width / dimensions.height;
-      if (candidateRatio < 0.88 || candidateRatio > 1.14) continue;
-      if (Math.min(dimensions.width, dimensions.height) < 48) continue;
+      if (candidateRatio < 0.8 || candidateRatio > 1.25) continue;
 
       app.icon = candidate.icon;
       app.iconSource = candidate.iconSource || "icon";
@@ -120,7 +130,6 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
       return;
     }
 
-    /* Mark the check complete so a weak-but-valid icon does not trigger on every render. */
     app.iconMetaVersion = ICON_META_VERSION;
     persistState();
   } catch (error) {
