@@ -1,0 +1,11 @@
+/* Loopen App icons are functional brand marks, not part of the atmospheric color grade. */
+.category-card .app-favicon {
+  width: 25px !important;
+  height: 25px !important;
+  max-width: 25px !important;
+  max-height: 25px !important;
+  object-fit: contain !important;
+  filter: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+}
