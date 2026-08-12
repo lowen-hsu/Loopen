@@ -1,8 +1,35 @@
-/* Loopen App icons — keep source identity, but print it through the same xuan-paper material as the interface. */
+/* Loopen App icons — frosted glass blocks.
+   Keep favicon identity clean; unify the launcher through the container material instead of tinting the artwork itself. */
+
 .category-card .app-circle {
   position: relative !important;
   overflow: hidden !important;
   isolation: isolate !important;
+  border-radius: 17px !important;
+  border: 1px solid rgba(246, 226, 195, .22) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 244, 224, .13), rgba(255, 255, 255, .035) 42%, rgba(74, 51, 39, .11)),
+    rgba(155, 117, 88, .10) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 224, .18),
+    inset 0 -1px 0 rgba(74, 48, 35, .12),
+    0 8px 22px rgba(8, 5, 3, .12) !important;
+  backdrop-filter: blur(8px) saturate(.72) brightness(1.10) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(.72) brightness(1.10) !important;
+}
+
+/* Soft internal reflection, like a thin warm glass tile catching ambient light. */
+.category-card .app-circle::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 246, 228, .18), transparent 42%),
+    linear-gradient(155deg, rgba(255, 239, 214, .07), transparent 46%, rgba(255, 255, 255, .025) 72%, transparent) !important;
+  opacity: .82 !important;
 }
 
 .category-card .app-favicon {
@@ -12,32 +39,38 @@
   max-height: 25px !important;
   object-fit: contain !important;
   position: relative !important;
-  z-index: 1 !important;
+  z-index: 2 !important;
 
-  /* Low-chroma print, not monochrome: brand identity remains readable. */
-  filter: saturate(.46) contrast(.90) brightness(.94) sepia(.06) !important;
-  opacity: .90 !important;
+  /* Keep brand colour recognizable, only gently quiet the saturation. */
+  filter: saturate(.72) contrast(.94) brightness(.96) !important;
+  opacity: .96 !important;
   mix-blend-mode: normal !important;
 }
 
-/* A thin translucent paper veil sits physically above each real App mark. */
-.category-card .app-item:not(.app-add) .app-circle::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: .54;
+/* Very fine surface grain belongs to the glass, not the favicon artwork. */
+.category-card .app-item .app-circle::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 3 !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  opacity: .20 !important;
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='4' seed='57' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.50'/%3E%3C/svg%3E"),
-    linear-gradient(145deg, rgba(244,221,184,.13), rgba(165,119,83,.055) 55%, rgba(62,43,33,.06));
-  background-size: 72px 72px, auto;
-  background-blend-mode: soft-light, normal;
-  mix-blend-mode: soft-light;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' seed='67' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.48'/%3E%3C/svg%3E") !important;
+  background-size: 72px 72px !important;
+  mix-blend-mode: soft-light !important;
 }
 
-.category-card .app-initial {
+.category-card .app-initial,
+.category-card .app-add .app-circle {
   position: relative !important;
-  z-index: 1 !important;
+  z-index: 2 !important;
+}
+
+.category-card .app-add .app-circle {
+  color: rgba(239, 218, 186, .78) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 244, 224, .09), rgba(255, 255, 255, .02) 45%, rgba(74, 51, 39, .08)),
+    rgba(144, 106, 80, .075) !important;
 }
