@@ -86,6 +86,13 @@ function applyResolvedIcon(app, candidate) {
   app.iconPurpose = candidate.iconPurpose || null;
   app.iconSizes = candidate.iconSizes || null;
   app.iconMetaVersion = ICON_META_VERSION;
+  app.iconRepairAttemptVersion = ICON_META_VERSION;
+}
+
+function updateImageInPlace(imageElement, iconUrl) {
+  if (!imageElement?.isConnected || !iconUrl) return;
+  const resolved = new URL(iconUrl, location.href).href;
+  if (imageElement.src !== resolved) imageElement.src = resolved;
 }
 
 submitAddApp = async function submitAddAppWithResolvedIcon(categoryId) {
@@ -129,7 +136,8 @@ submitAddApp = async function submitAddAppWithResolvedIcon(categoryId) {
       iconSource: preferred?.iconSource || "favicon-fallback",
       iconPurpose: preferred?.iconPurpose || null,
       iconSizes: preferred?.iconSizes || null,
-      iconMetaVersion: ICON_META_VERSION
+      iconMetaVersion: ICON_META_VERSION,
+      iconRepairAttemptVersion: ICON_META_VERSION
     });
 
     persistState();
@@ -145,7 +153,9 @@ submitAddApp = async function submitAddAppWithResolvedIcon(categoryId) {
 /*
  * Existing stored icons from older resolver versions are migrated once. The
  * migration deliberately uses the browser favicon closest to 32px instead of
- * the largest page/PWA artwork.
+ * the largest page/PWA artwork. Icon repairs update the existing <img> in
+ * place; they must never call the global render(), because rebuilding all
+ * image nodes from their load handlers can create a visible re-render loop.
  */
 async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
   const category = getCategory(categoryId);
@@ -156,8 +166,10 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
   const weirdAspect = ratio < 0.8 || ratio > 1.25;
   const staleResolver = Number(app.iconMetaVersion || 0) < ICON_META_VERSION;
   const weakFallback = !app.iconSource || app.iconSource === "favicon-fallback";
+  const alreadyAttempted = Number(app.iconRepairAttemptVersion || 0) >= ICON_META_VERSION;
 
   if (!staleResolver && !weirdAspect && !weakFallback) return;
+  if (!staleResolver && alreadyAttempted) return;
   if (iconRepairInFlight.has(app.id)) return;
 
   iconRepairInFlight.add(app.id);
@@ -174,7 +186,7 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
       if (ratioOk) {
         applyResolvedIcon(app, preferred);
         persistState();
-        render();
+        updateImageInPlace(imageElement, preferred.icon);
         return;
       }
     }
@@ -189,13 +201,20 @@ async function repairAppIconIfNeeded(categoryId, appId, imageElement) {
 
       applyResolvedIcon(app, candidate);
       persistState();
-      render();
+      updateImageInPlace(imageElement, candidate.icon);
       return;
     }
 
+    /* Mark this resolver version as checked even if the remote site is unavailable. */
     app.iconMetaVersion = ICON_META_VERSION;
+    app.iconRepairAttemptVersion = ICON_META_VERSION;
+    if (!app.iconSource || app.iconSource === "favicon-fallback") {
+      app.iconSource = "stored-icon";
+    }
     persistState();
   } catch (error) {
+    app.iconRepairAttemptVersion = ICON_META_VERSION;
+    persistState();
     console.warn("Loopen icon repair failed.", error);
   } finally {
     iconRepairInFlight.delete(app.id);
