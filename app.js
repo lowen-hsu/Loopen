@@ -25,7 +25,6 @@ const defaultState = {
 };
 
 const categoryList = document.getElementById("categoryList");
-const searchInput = document.getElementById("searchInput");
 const addCategoryButton = document.getElementById("addCategoryButton");
 const settingsButton = document.getElementById("settingsButton");
 const settingsMenu = document.getElementById("settingsMenu");
@@ -48,7 +47,6 @@ const toast = document.getElementById("toast");
 const toastText = document.getElementById("toastText");
 
 let state = loadState();
-let query = "";
 let formContext = null;
 let confirmAction = null;
 let sortSession = null;
@@ -99,48 +97,15 @@ function getCategoryIndex(categoryId) {
   return state.categories.findIndex(category => category.id === categoryId);
 }
 
-function normalizedSearchActive() {
-  return query.trim().length > 0;
-}
-
 function render() {
   categoryList.replaceChildren();
 
-  const normalizedQuery = query.trim().toLocaleLowerCase("zh-Hant");
-  let visibleCount = 0;
-
   state.categories.forEach((category, categoryIndex) => {
-    const categoryMatches =
-      normalizedQuery &&
-      category.name.toLocaleLowerCase("zh-Hant").includes(normalizedQuery);
-
-    const visibleApps = normalizedQuery
-      ? category.apps.filter(app =>
-          app.name.toLocaleLowerCase("zh-Hant").includes(normalizedQuery)
-        )
-      : category.apps;
-
-    if (normalizedQuery && !categoryMatches && visibleApps.length === 0) return;
-
-    visibleCount += 1;
-    categoryList.appendChild(
-      createCategory(
-        category,
-        categoryIndex,
-        categoryMatches ? category.apps : visibleApps
-      )
-    );
+    categoryList.appendChild(createCategory(category, categoryIndex));
   });
-
-  if (normalizedQuery && visibleCount === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty-search";
-    empty.textContent = "找不到符合的 App，換個關鍵字試試看。";
-    categoryList.appendChild(empty);
-  }
 }
 
-function createCategory(category, categoryIndex, visibleApps) {
+function createCategory(category, categoryIndex) {
   const wrap = document.createElement("div");
   wrap.className = "category-wrap";
   wrap.dataset.categoryId = category.id;
@@ -213,18 +178,11 @@ function createCategory(category, categoryIndex, visibleApps) {
   const grid = document.createElement("div");
   grid.className = "app-grid";
 
-  visibleApps.forEach(app => {
+  category.apps.forEach(app => {
     grid.appendChild(createAppItem(category, app));
   });
 
-  if (
-    !normalizedSearchActive() ||
-    category.name
-      .toLocaleLowerCase("zh-Hant")
-      .includes(query.trim().toLocaleLowerCase("zh-Hant"))
-  ) {
-    grid.appendChild(createAddAppItem(category.id));
-  }
+  grid.appendChild(createAddAppItem(category.id));
 
   card.append(head, grid);
   wrap.appendChild(card);
@@ -293,6 +251,13 @@ function createAppItem(category, app) {
 
   const index = category.apps.findIndex(candidate => candidate.id === app.id);
 
+  const editButton = smallMoveButton(
+    "✎",
+    "修改 App",
+    () => openAppEdit(category.id, app.id)
+  );
+  editButton.classList.add("app-edit-button");
+
   const deleteButton = smallMoveButton(
     "×",
     "刪除 App",
@@ -313,6 +278,7 @@ function createAppItem(category, app) {
       () => moveApp(category.id, app.id, 1),
       index === category.apps.length - 1
     ),
+    editButton,
     deleteButton
   );
 
@@ -622,6 +588,32 @@ function openAddApp(categoryId) {
   openFormDialog(urlField.input);
 }
 
+function openAppEdit(categoryId, appId) {
+  const category = getCategory(categoryId);
+  const app = category?.apps.find(candidate => candidate.id === appId);
+  if (!category || !app) return;
+
+  formContext = { type: "edit-app", categoryId, appId };
+  dialogTitle.textContent = "修改 Web App";
+  dialogDescription.textContent = `編輯「${app.name}」`;
+  dialogFields.replaceChildren();
+
+  const nameField = createField("名稱", "app-name", {
+    value: app.name,
+    placeholder: "Web App 名稱"
+  });
+
+  const urlField = createField("網址", "app-url", {
+    type: "url",
+    value: app.url,
+    placeholder: "https://...",
+    autocomplete: "url"
+  });
+
+  dialogFields.append(nameField.label, urlField.label);
+  openFormDialog(nameField.input, true);
+}
+
 function openAddCategory() {
   formContext = { type: "add-category" };
   dialogTitle.textContent = "新增分類";
@@ -676,6 +668,9 @@ dialogForm.addEventListener("submit", event => {
   if (!formContext) return;
 
   if (formContext.type === "add-app") submitAddApp(formContext.categoryId);
+  if (formContext.type === "edit-app") {
+    submitAppEdit(formContext.categoryId, formContext.appId);
+  }
   if (formContext.type === "add-category") submitAddCategory();
   if (formContext.type === "rename-category") {
     submitCategoryRename(formContext.categoryId);
@@ -719,6 +714,54 @@ function submitAddApp(categoryId) {
   closeFormDialog();
   render();
   showToast(`${name} 已新增成功`);
+}
+
+function submitAppEdit(categoryId, appId) {
+  const category = getCategory(categoryId);
+  const app = category?.apps.find(candidate => candidate.id === appId);
+  const urlInput = document.getElementById("app-url");
+  const nameInput = document.getElementById("app-name");
+
+  clearFieldErrors();
+  if (!category || !app || !urlInput || !nameInput) return;
+
+  let normalizedUrl;
+  try {
+    normalizedUrl = normalizeUrl(urlInput.value);
+  } catch {
+    setFieldError("app-url", "請輸入有效的網址");
+    urlInput.focus();
+    return;
+  }
+
+  const name = nameInput.value.trim() || nameFromUrl(normalizedUrl);
+  if (!name) {
+    setFieldError("app-name", "請輸入 App 名稱");
+    nameInput.focus();
+    return;
+  }
+
+  const urlChanged = normalizedUrl !== app.url;
+  app.name = name;
+  app.url = normalizedUrl;
+
+  if (urlChanged) {
+    const parsed = new URL(normalizedUrl);
+    app.icon = `${parsed.origin}/favicon.ico`;
+    app.iconSource = "favicon-fallback";
+    app.iconPurpose = null;
+    app.iconSizes = null;
+    app.iconMetaVersion = 0;
+  }
+
+  const isManaging =
+    sortSession?.mode === "app" && sortSession.categoryId === categoryId;
+
+  if (!isManaging) persistState();
+
+  closeFormDialog();
+  render();
+  showToast(isManaging ? "App 已修改，記得儲存變更" : "App 已更新");
 }
 
 function submitAddCategory() {
@@ -866,8 +909,6 @@ function requestReset() {
   confirmAction = () => {
     state = clone(defaultState);
     sortSession = null;
-    query = "";
-    searchInput.value = "";
 
     persistState();
     render();
@@ -912,11 +953,6 @@ settingsMenu
     settingsButton.setAttribute("aria-expanded", "false");
     requestReset();
   });
-
-searchInput.addEventListener("input", event => {
-  query = event.target.value;
-  render();
-});
 
 window.addEventListener("keydown", event => {
   if (
